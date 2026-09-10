@@ -7,7 +7,19 @@ CORS(app)
 
 @app.route('/api/status', methods=['GET'])
 def status():
-    return jsonify({"status": "Servidor QualityTrack en línea", "arquitectura": "Modular"}), 200
+    conexion = get_db_connection()
+    
+    if conexion and conexion.is_connected():
+        estado_db = "Conectado exitosamente a MySQL "
+        conexion.close() 
+    else:
+        estado_db = "Error de conexión a la base de datos "
+
+    return jsonify({
+        "status": "Servidor QualityTrack en línea", 
+        "arquitectura": "Modular",
+        "base_de_datos": estado_db
+    }), 200
 
 @app.route('/api/ot/<int:id_ot>/control', methods=['PUT'])
 def control_calidad(id_ot):
