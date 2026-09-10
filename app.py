@@ -63,7 +63,6 @@ def listar_ordenes():
         return jsonify({"status": "error", "message": "No hay conexión a la base de datos"}), 500
 
     try:
-        # dictionary=True devuelve los registros como JSON automáticamente
         cursor = conexion.cursor(dictionary=True)
 
         sql = """
@@ -129,5 +128,45 @@ def obtener_detalle_orden(id_ot):
     finally:
         if 'cursor' in locals(): cursor.close()
         if conexion.is_connected(): conexion.close()
-if __name__ == '__main__':
+
+@app.route('/api/fallas', methods=['POST'])
+def registrar_falla():
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "No hay conexión a la base de datos"}), 500
+
+    try:
+        datos = request.get_json()
+        id_ot = datos.get('id_ot')
+        tipo_falla = datos.get('tipo_falla') # Esperamos 'Leve' o 'Critica'
+        descripcion = datos.get('descripcion')
+
+        # Validación de seguridad básica
+        if not id_ot or not tipo_falla or not descripcion:
+            return jsonify({"status": "error", "message": "Faltan datos obligatorios (id_ot, tipo_falla, descripcion)"}), 400
+
+        cursor = conexion.cursor()
+
+        sql_insert = "INSERT INTO Fallas (id_ot, tipo_falla, descripcion) VALUES (%s, %s, %s)"
+        cursor.execute(sql_insert, (id_ot, tipo_falla, descripcion))
+
+        mensaje = "Falla registrada exitosamente."
+
+        if tipo_falla == 'Critica':
+            sql_update = "UPDATE Ordenes_Trabajo SET estado_actual = 'Detenida' WHERE id_ot = %s"
+            cursor.execute(sql_update, (id_ot,))
+            mensaje += " Operación detenida. Supervisor notificado."
+
+        conexion.commit()
+        return jsonify({"status": "success", "message": mensaje}), 201
+
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+
+if __name__ == '__main__':  
     app.run(debug=True, port=5000)
