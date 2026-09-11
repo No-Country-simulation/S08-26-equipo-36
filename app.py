@@ -147,7 +147,7 @@ def registrar_falla():
 
         cursor = conexion.cursor()
 
-        sql_insert = "INSERT INTO Fallas (id_ot, tipo_falla, descripcion) VALUES (%s, %s, %s)"
+        sql_insert = "INSERT INTO NoConformidades (id_ot, tipo_falla, descripcion) VALUES (%s, %s, %s)"
         cursor.execute(sql_insert, (id_ot, tipo_falla, descripcion))
 
         mensaje = "Falla registrada exitosamente."
