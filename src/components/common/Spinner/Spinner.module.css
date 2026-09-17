@@ -1,0 +1,65 @@
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.fullscreen {
+  min-height: calc(100vh - 120px);
+}
+
+.inline {
+  padding: 32px 0;
+}
+
+/* Envoltura del isotipo */
+.logoWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tamaños */
+.sm {
+  width: 32px;
+  height: 32px;
+}
+
+.md {
+  width: 52px;
+  height: 52px;
+}
+
+.lg {
+  width: 80px;
+  height: 80px;
+}
+
+.logoSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.loadingText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+  letter-spacing: 0.3px;
+  animation: pulseText 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes pulseText {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
