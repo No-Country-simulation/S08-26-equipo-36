@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+:root {
+  /* Fondos */
+  --bg-main: #080c16;
+  --bg-sidebar: #0a0f1a;
+  --bg-card: #0e1320;
+  --bg-card-hover: #131b2e;
+
+  /* Bordes y capas translúcidas */
+  --border: rgba(255, 255, 255, 0.06); /* #ffffff0f */
+  --border-subtle: rgba(255, 255, 255, 0.03); /* #ffffff05 */
+
+  /* Textos */
+  --text-white: #ffffff;
+  --text-main: #eaedf0;
+  --text-secondary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #8591a3;
+  --text-dark: #475569;
+
+  /* Colores primarios y acentos */
+  --orange: #fd9f12;
+  --orange-glow: #fd9f121a;
+  --amber: #f59e0b;
+  --amber-glow: #f59e0b1a;
+  --green: #2fa77b;
+  --slate: #64748b;
+  --cyan: #0ea5e9;
+  --cyan-glow: #0ea5e91a;
+
+  /* Tipografías */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main) !important;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}

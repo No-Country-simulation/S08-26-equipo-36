@@ -1,0 +1,175 @@
+.sidebar {
+  display: none;
+  width: 256px;
+  flex-shrink: 0;
+  flex-direction: column;
+  background-color: var(--bg-sidebar, #0a0f1a);
+  border-right: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex;
+  }
+}
+
+/* Header de la marca */
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  height: 64px;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  box-sizing: border-box;
+}
+
+.brandIconBox {
+  display: flex;
+  height: 36px;
+  width: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background-color: var(--orange, #fd9f12);
+  color: #000000;
+  box-shadow: 0 10px 15px -3px rgba(253, 159, 18, 0.2);
+  flex-shrink: 0;
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brandTitle {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0;
+}
+
+.brandSubtitle {
+  font-size: 11px;
+  color: var(--slate, #64748b);
+  font-family: var(--font-mono, monospace);
+  margin: 0;
+}
+
+/* Navegación */
+.nav {
+  flex: 1;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.navItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--text-muted, #94a3b8);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.navItem:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.navItemActive {
+  background-color: var(--orange-glow, rgba(253, 159, 18, 0.1));
+  color: var(--orange, #fd9f12);
+  font-weight: 600;
+}
+
+.navItemActive:hover {
+  background-color: var(--orange-glow, rgba(253, 159, 18, 0.14));
+  color: var(--orange, #fd9f12);
+}
+
+/* Barra vertical indicadora a la izquierda del item activo */
+.activeIndicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  width: 4px;
+  border-top-right-radius: 9999px;
+  border-bottom-right-radius: 9999px;
+  background-color: var(--orange, #fd9f12);
+}
+
+.navIcon {
+  height: 18px;
+  width: 18px;
+  flex-shrink: 0;
+}
+
+.navChevron {
+  height: 16px;
+  width: 16px;
+  margin-left: auto;
+  color: var(--slate, #64748b);
+}
+
+/* Footer del Sidebar */
+.footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerText {
+  font-size: 11px;
+  color: var(--text-dim, #8591a3);
+  line-height: 1.5;
+  padding: 0 12px;
+  margin: 0;
+}
+
+.btnLogout {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.btnLogout:hover {
+  color: #f87171;
+  background-color: rgba(244, 63, 94, 0.1);
+}
+
+.logo{
+  height: 50px;
+  width: auto;
+  padding: 16px 20px;
+}
