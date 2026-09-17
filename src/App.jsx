@@ -12,7 +12,7 @@ import Register from "./pages/Register/Register";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
-// Cambia a `true` cuando quieras bloquear el acceso sin login
+// CAMBIAR A `true` PARA BLOQUEAR EL ACCESO SIN LOGIN
 const AUTH_PROTECTION_ENABLED = false;
 
 // Guardián de rutas protegidas
