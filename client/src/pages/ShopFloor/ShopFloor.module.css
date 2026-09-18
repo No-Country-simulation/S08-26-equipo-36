@@ -1,0 +1,677 @@
+/* Contenido Principal */
+.mainContent {
+  flex: 1;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modificador para centrado total cuando está vacío */
+.mainContentCentered {
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+}
+
+/* Header superior */
+.headerBar {
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.headerInner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.factoryIconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-main);
+  box-shadow: 0 4px 14px var(--orange-glow);
+  flex-shrink: 0;
+}
+
+.imagotipoTaller {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.mainTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-white);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subTitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+}
+
+.btnExit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--border);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  font-weight: 500;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnExit:hover {
+  background-color: var(--bg-action-hover);
+  color: var(--text-white);
+}
+
+.btnExit:active {
+  transform: scale(0.98);
+}
+
+/* Buscador */
+.searchBox {
+  position: relative;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate);
+}
+
+.searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  padding: 13px 16px 13px 48px;
+  font-size: 14.5px;
+  color: var(--text-white);
+  outline: none;
+  font-family: var(--font-sans);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.searchInput:focus {
+  border-color: var(--border-focus);
+  background-color: var(--bg-action-subtle);
+}
+
+.searchInput::placeholder {
+  color: var(--slate);
+}
+
+/* Contenido Principal */
+.mainContent {
+  flex: 1;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* Grilla de Tarjetas */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.emptyOrders {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-muted);
+}
+
+.emptyOrdersTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0 0 6px 0;
+}
+
+.emptyOrdersSub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ============================================================ */
+/* VISTA DETALLE DE TABLET (OT SELECCIONADA)                    */
+/* ============================================================ */
+.detailTopBar {
+  background-color: var(--bg-sidebar);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.detailTopInner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.detailHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailOtNum {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--orange);
+  margin: 0;
+}
+
+.detailPiece {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges de cabecera detalle */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.badgeDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.badgeMecanizado,
+.badgeCalidad {
+  background-color: var(--amber-glow);
+  color: var(--badge-amber-text);
+  border: 1px solid var(--amber-border);
+}
+
+.badgeMecanizado .badgeDot,
+.badgeCalidad .badgeDot {
+  background-color: var(--badge-amber-text);
+}
+
+.detailBody {
+  flex: 1;
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.metaGrid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 640px) {
+  .metaGrid4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.metaBox {
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.metaBoxLabel {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px 0;
+}
+
+.metaBoxVal {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Especificaciones técnicas destacadas */
+.specsAlertBox {
+  background-color: var(--amber-glow);
+  border: 1px solid var(--amber-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.specsAlertTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--amber);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px 0;
+}
+
+.specsAlertText {
+  font-size: 13px;
+  color: var(--amber-text-light);
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Progreso */
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.progressTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-white);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.progressStat {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.progressBarBg {
+  height: 8px;
+  background-color: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.progressBarFill {
+  height: 100%;
+  background-color: var(--progress-fill);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Botones para tableta */
+.tabletActionRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.btnTabletQc {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 12px;
+  background-color: var(--orange-glow);
+  border: 1px solid var(--orange-border);
+  color: var(--orange);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnTabletQc:active {
+  transform: scale(0.98);
+}
+
+.btnTabletDocs {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 12px;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-action);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnTabletDocs:active {
+  transform: scale(0.98);
+}
+
+/* Hoja de ruta */
+.opsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.emptyOpsText {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.opCard {
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.opLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.opStepNum {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.opTitle {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.opMeta {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 3px 0 0 0;
+}
+
+.btnOpAction {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnOpPending {
+  background-color: var(--bg-action-subtle);
+  border: 1px solid var(--border-action);
+  color: var(--text-white);
+}
+
+.btnOpDone {
+  background-color: var(--green-glow);
+  border: 1px solid var(--green-border);
+  color: var(--green);
+}
+
+/* ============================================================ */
+/* MODAL DE INCIDENCIAS CRÍTICAS                                */
+/* ============================================================ */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--bg-overlay);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modalBox {
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-action);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.18s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modalTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--prio-high-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.modalClose:hover {
+  background-color: var(--border);
+  color: var(--text-white);
+}
+
+.modalForm {
+  padding: 18px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-action);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--text-white);
+  outline: none;
+  font-family: var(--font-sans);
+  transition: border-color 0.15s ease;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--border-focus);
+}
+
+.dangerAlertBanner {
+  background-color: var(--red-glow);
+  border: 1px solid var(--red-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  color: var(--text-white);
+  line-height: 1.4;
+}
+
+.dangerAlertBanner strong {
+  color: var(--red-text-strong);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btnModalCancel {
+  background-color: var(--bg-action-subtle);
+  border: 1px solid var(--border-action);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btnModalCancel:hover {
+  background-color: var(--bg-action-hover);
+  color: var(--text-white);
+}
+
+.btnModalSaveDanger {
+  background-color: var(--red);
+  color: var(--text-white);
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btnModalSaveDanger:hover {
+  opacity: 0.9;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
