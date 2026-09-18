@@ -1,0 +1,569 @@
+.container {
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.tabHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.tabMainTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0 0 4px 0;
+}
+
+.tabProgressSub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.btnAddOp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.btnAddOp:hover {
+  background-color: var(--btn-primary-hover);
+  opacity: 0.95;
+}
+
+/* Empty State */
+.emptyRoadmapBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  text-align: center;
+}
+
+.emptyRoadmapIconCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate);
+  margin-bottom: 12px;
+}
+
+.emptyRoadmapTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0 0 4px 0;
+}
+
+.emptyRoadmapDesc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 420px;
+}
+
+/* Lista de Operaciones */
+.opsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  gap: 16px;
+  transition: border-color 0.15s ease;
+}
+
+.opRow:hover {
+  border-color: var(--border-medium);
+}
+
+.opLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dragHandle {
+  color: var(--slate);
+  cursor: grab;
+}
+
+.opBadgeNumber {
+  height: 26px;
+  width: 26px;
+  border-radius: 50%;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.opInfo {
+  min-width: 0;
+}
+
+.opNameLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.opName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.typeBadge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  background-color: var(--border-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.opSubline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.opSubItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.opRightActions {
+  display: flex;
+  align-items: center;
+}
+
+/* Custom Dropdown */
+.customSelectWrapper {
+  position: relative;
+}
+
+.customTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 32px;
+  min-width: 120px;
+  padding: 0 10px;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.customTriggerBtn:hover {
+  background-color: var(--border-hover);
+  border-color: var(--border-hover);
+}
+
+.chevronIcon {
+  color: var(--text-muted);
+}
+
+.checkIcon {
+  color: var(--status-done);
+}
+
+.customDropdownMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 130px;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-action);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: var(--shadow-modal);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.customOptionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.customOptionItem:hover {
+  background-color: var(--border-subtle);
+  color: var(--text-white);
+}
+
+.customOptionSelected {
+  color: var(--text-white);
+  font-weight: 600;
+}
+
+/* Modal Nueva/Editar Operación */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--bg-overlay);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modalBox {
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-action);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--shadow-modal);
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  position: relative;
+  animation: slideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modalTitle {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-white);
+  margin: 0;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.modalCloseBtn:hover {
+  color: var(--text-white);
+  background-color: var(--border-subtle);
+}
+
+.modalForm {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formRowSecuencia {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 14px;
+}
+
+.formRow2Col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 500px) {
+  .formRow2Col,
+  .formRowSecuencia {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.formLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.reqStar {
+  color: var(--orange);
+  margin-left: 2px;
+}
+
+.formInput,
+.formTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-action);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--text-white);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.formInput:focus,
+.formTextarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--orange-glow);
+}
+
+.formInput::placeholder,
+.formTextarea::placeholder {
+  color: var(--slate);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.customModalTrigger {
+  width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-action);
+  border-radius: 6px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-white);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.customModalTrigger:focus,
+.customModalTriggerActive {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px var(--orange-glow);
+}
+
+.customModalMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: var(--bg-sidebar);
+  border: 1px solid var(--border-action);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: var(--shadow-modal);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: none;
+  overflow: visible;
+  animation: fadeIn 0.12s ease-out;
+}
+
+.customModalOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.customModalOption:hover {
+  background-color: var(--border-subtle);
+  color: var(--text-white);
+}
+
+.customModalOptionSelected {
+  color: var(--text-white);
+  font-weight: 600;
+}
+
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btnCancel {
+  background-color: transparent;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnCancel:hover {
+  background-color: var(--border-subtle);
+  color: var(--text-white);
+}
+
+.btnSave {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  height: 36px;
+  padding: 0 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.btnSave:hover {
+  background-color: var(--btn-primary-hover);
+  opacity: 0.95;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  margin-left: 8px;
+}
+
+.opRow:hover .rowActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.btnRowAction {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 5px;
+  color: var(--slate);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.btnRowAction:hover {
+  opacity: 1;
+  color: var(--text-white);
+  background-color: var(--border-subtle);
+}
+
+.btnRowDelete:hover {
+  opacity: 1;
+  color: var(--prio-high-text);
+  background-color: var(--red-glow);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
