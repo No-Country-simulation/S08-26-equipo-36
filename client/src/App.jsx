@@ -7,15 +7,15 @@ import Quotes from "./pages/Quotes/Quotes";
 import WorkOrders from "./pages/WorkOrders/WorkOrders";
 import WorkOrderDetails from "./pages/WorkOrderDetails/WorkOrderDetails";
 import Taller from "./pages/ShopFloor/ShopFloor";
-import Login from "./pages/Login/Login";
 import Register from "./pages/Register/Register";
-import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword/ResetPassword";
+// Descomentar a medida que incorporemos los componentes:
+// import Login from "./pages/Login/Login";
+// import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+// import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
-// CAMBIAR A `true` PARA BLOQUEAR EL ACCESO SIN LOGIN
+// Cambiar a `true` al habilitar la protección con credenciales reales
 const AUTH_PROTECTION_ENABLED = false;
 
-// Guardián de rutas protegidas
 function ProtectedRoute() {
   const location = useLocation();
 
@@ -41,7 +41,6 @@ function AppLayout() {
     location.pathname === "/reset-password";
   const isShopFloor = location.pathname.startsWith("/taller");
 
-  // Rutas que ocupan el 100% de la pantalla sin sidebar ni padding de escritorio
   const isFullScreen = isAuthRoute || isShopFloor;
 
   return (
@@ -49,13 +48,11 @@ function AppLayout() {
       style={{
         display: "flex",
         minHeight: "100vh",
-        backgroundColor: "var(--b44-bg-main, #080c16)",
+        backgroundColor: "var(--bg-main)",
       }}
     >
-      {/* Oculta la barra lateral en Login/Auth y en Modo Taller */}
       {!isFullScreen && <Sidebar />}
 
-      {/* Elimina padding en Login y Taller para centrar y ocupar todo el viewport */}
       <main
         style={{
           flex: 1,
@@ -70,10 +67,10 @@ function AppLayout() {
       >
         <Routes>
           {/* Rutas Públicas de Autenticación */}
-          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          {/* <Route path="/login" element={<Login />} /> */}
+          {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
+          {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
 
           {/* Rutas Protegidas de la Aplicación */}
           <Route element={<ProtectedRoute />}>
