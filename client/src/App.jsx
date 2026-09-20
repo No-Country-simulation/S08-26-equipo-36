@@ -8,10 +8,9 @@ import WorkOrders from "./pages/WorkOrders/WorkOrders";
 import WorkOrderDetails from "./pages/WorkOrderDetails/WorkOrderDetails";
 import Taller from "./pages/ShopFloor/ShopFloor";
 import Register from "./pages/Register/Register";
-// Descomentar a medida que incorporemos los componentes:
 import Login from "./pages/Login/Login";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
-// import ResetPassword from "./pages/ResetPassword/ResetPassword";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
 // Cambiar a `true` al habilitar la protección con credenciales reales
 const AUTH_PROTECTION_ENABLED = false;
@@ -70,7 +69,7 @@ function AppLayout() {
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Rutas Protegidas de la Aplicación */}
           <Route element={<ProtectedRoute />}>
