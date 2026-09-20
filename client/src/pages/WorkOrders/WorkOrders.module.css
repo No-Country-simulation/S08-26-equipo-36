@@ -147,10 +147,10 @@
 .tableCard {
   background-color: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  box-sizing: border-box;
 }
-
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
@@ -327,13 +327,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 72px 24px;
   text-align: center;
+  width: 100%;
+  min-height: 420px;
+  padding: 48px 24px;
+  box-sizing: border-box;
+  font-family: var(--font-sans);
 }
 
 .emptyIconCircle {
-  width: 48px;
-  height: 48px;
+width: 56px;
+  height: 56px;
   border-radius: 50%;
   background-color: var(--border-subtle);
   border: 1px solid var(--border-medium);
@@ -341,18 +345,18 @@
   align-items: center;
   justify-content: center;
   color: var(--slate);
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .emptyTitle {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-white);
   margin: 0 0 6px 0;
 }
 
 .emptySubtitle {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-muted);
   max-width: 440px;
   line-height: 1.5;

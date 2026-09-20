@@ -75,6 +75,60 @@
 
   /* Barra y progreso activo */
   --progress-fill: #2fa77b;
+
+  /* Focus en inputs */
+  --border-focus: var(--orange);
+
+  --cyan: #38bdf8;
+  --cyan-glow: rgba(14, 165, 233, 0.1);
+  --cyan-border: rgba(14, 165, 233, 0.3);
+
+  /* Tokens semánticos de Prioridad Media (Sky / Cyan) */
+  --prio-med-bg: rgba(14, 165, 233, 0.1);
+  --prio-med-text: #38bdf8;
+  --prio-med-border: rgba(14, 165, 233, 0.3);
+
+  /* Tokens semánticos de Prioridad Alta / Urgente (Orange / Red) */
+  --prio-high-bg: var(--orange-glow);
+  --prio-high-text: var(--orange);
+  --prio-high-border: var(--orange-border);
+
+  /* Tokens semánticos de Prioridad Baja (Slate) */
+  --prio-low-bg: rgba(100, 116, 139, 0.1);
+  --prio-low-text: #94a3b8;
+  --prio-low-border: rgba(100, 116, 139, 0.3);
+
+/* ============================================================ */
+  /* Prioridad Alta / Crítica / Urgente (Red / Rose) */
+  --red: #ef4444;
+  --red-glow: rgba(239, 68, 68, 0.15);
+  --red-border: rgba(239, 68, 68, 0.3);
+  --red-text-strong: #fca5a5;
+
+  --prio-high-bg: rgba(239, 68, 68, 0.15);
+  --prio-high-text: #f87171;
+  --prio-high-border: rgba(239, 68, 68, 0.3);
+
+  /* Prioridad Media (Sky / Cyan) */
+  --cyan: #38bdf8;
+  --cyan-glow: rgba(14, 165, 233, 0.12);
+  --cyan-border: rgba(14, 165, 233, 0.3);
+
+  --prio-med-bg: rgba(14, 165, 233, 0.12);
+  --prio-med-text: #38bdf8;
+  --prio-med-border: rgba(14, 165, 233, 0.3);
+
+  /* Prioridad Baja (Slate) */
+  --prio-low-bg: rgba(100, 116, 139, 0.12);
+  --prio-low-text: #94a3b8;
+  --prio-low-border: rgba(100, 116, 139, 0.3);
+
+  /* Estados de Producción / Alertas adicionales */
+  --badge-amber-text: #fbbf24;
+  --status-pause: #fbbf24;
+  --status-done: #34d399;
+
+
 }
 
 html, body {
@@ -86,3 +140,31 @@ html, body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
+
+/* Foco unificado en todos los campos de formulario */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--orange) !important;
+  box-shadow: 0 0 0 2px var(--orange-glow) !important;
+  outline: none;
+}
+
+/* Icono blanco y tema oscuro para selector de fecha */
+input[type="date"] {
+  color-scheme: dark;
+  padding: 9px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: brightness(0) invert(1);
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+

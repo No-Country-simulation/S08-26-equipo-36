@@ -240,7 +240,7 @@ export default function WorkOrderDetails() {
               </span>
               <span className={`${styles.badge} ${styles.prioAlta}`}>
                 <span className={styles.dot} />
-                {(ot.prioridad || "media").toUpperCase()}
+                {(ot.prioridad || "media")}
               </span>
             </div>
 

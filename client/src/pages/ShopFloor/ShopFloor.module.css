@@ -174,10 +174,17 @@
   }
 }
 
-.emptyOrders {
-  text-align: center;
-  padding: 60px 0;
-  color: var(--text-muted);
+.emptyIconCircle {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--border-subtle);
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate);
+  margin-bottom: 16px;
 }
 
 .emptyOrdersTitle {
@@ -188,8 +195,10 @@
 }
 
 .emptyOrdersSub {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--text-muted);
+  max-width: 440px;
+  line-height: 1.5;
   margin: 0;
 }
 

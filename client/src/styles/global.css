@@ -1,4 +1,4 @@
-@import './styles/variables.css';
+@import './variables.css';
 
 * {
   box-sizing: border-box;
@@ -7,9 +7,18 @@
 }
 
 body {
-  background-color: var(--bg-app);
-  color: var(--text-primary);
+  background-color: var(--bg-main, #080c16);
+  color: var(--text-main, #eaedf0);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
+
+
+
+
+
+
+
+
+

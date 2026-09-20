@@ -150,7 +150,10 @@
   font-weight: 500;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    background-color 0.15s ease;
 }
 
 .otStatusTriggerBtn:hover {
@@ -199,7 +202,9 @@
   font-weight: 500;
   cursor: pointer;
   text-align: left;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
 }
 
 .otStatusOptionItem:hover {
@@ -264,7 +269,9 @@
 /* Responsable Card y Edición Inline */
 .metaCardInteractive {
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .metaCardInteractive:hover {
@@ -289,7 +296,9 @@
   align-items: center;
   justify-content: center;
   opacity: 0.5;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
 }
 
 .metaCardInteractive:hover .editIconBtn {
@@ -375,8 +384,8 @@
 
 .specsBox {
   border-radius: 8px;
-  border: 1px solid var(--yellow-border);
-  background-color: var(--yellow-glow);
+  border: 1px solid var(--orange-border);
+  background-color: var(--orange-glow);
   padding: 14px 18px;
 }
 
@@ -385,7 +394,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--status-pause);
+  color: var(--amber);
   margin: 0 0 6px 0;
 }
 
@@ -495,6 +504,7 @@
   background-color: var(--orange-glow);
   color: var(--orange);
   border-color: var(--orange-border);
+  text-transform: capitalize;
 }
 
 .statusCreada {
@@ -529,6 +539,12 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
