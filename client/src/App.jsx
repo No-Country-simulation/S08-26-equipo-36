@@ -9,7 +9,7 @@ import WorkOrderDetails from "./pages/WorkOrderDetails/WorkOrderDetails";
 import Taller from "./pages/ShopFloor/ShopFloor";
 import Register from "./pages/Register/Register";
 // Descomentar a medida que incorporemos los componentes:
-// import Login from "./pages/Login/Login";
+import Login from "./pages/Login/Login";
 // import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 // import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
@@ -68,7 +68,7 @@ function AppLayout() {
         <Routes>
           {/* Rutas Públicas de Autenticación */}
           <Route path="/register" element={<Register />} />
-          {/* <Route path="/login" element={<Login />} /> */}
+          <Route path="/login" element={<Login />} />
           {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
           {/* <Route path="/reset-password" element={<ResetPassword />} /> */}
 
