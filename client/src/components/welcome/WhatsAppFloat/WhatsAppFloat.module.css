@@ -1,0 +1,35 @@
+.floatBtn {
+  position: fixed;
+  bottom: clamp(1.25rem, 3vw, 2.25rem);
+  right: clamp(1.25rem, 3vw, 2.25rem);
+  width: clamp(48px, 4.5vw, 56px);
+  height: clamp(48px, 4.5vw, 56px);
+  border-radius: 9999px;
+  background-color: #25d366;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4);
+  z-index: 1000;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              filter 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.floatBtn:hover {
+  transform: scale(1.1) translateY(-3px);
+  filter: brightness(1.08);
+  box-shadow: 0 12px 28px rgba(37, 211, 102, 0.55);
+}
+
+.floatBtn:active {
+  transform: scale(0.96);
+}
+
+.whatsappIcon {
+  width: clamp(24px, 2.5vw, 30px);
+  height: clamp(24px, 2.5vw, 30px);
+}
