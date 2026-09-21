@@ -3,24 +3,32 @@ import { Link } from "react-router-dom";
 import { Mail, ArrowLeft } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import AuthLayout from "../../components/auth/AuthLayout/AuthLayout";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./ForgotPassword.module.css";
 
 export default function ForgotPassword() {
+  const { resetPassword } = useAuth();
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
 
+    setError("");
     setLoading(true);
 
-    // Simulación de solicitud de restablecimiento
-    setTimeout(() => {
+    try {
+      await resetPassword(email.trim());
       setLoading(false);
       setSent(true);
-    }, 700);
+    } catch (err) {
+      setLoading(false);
+      setError(err.message || "Ocurrió un error al solicitar el restablecimiento.");
+    }
   };
 
   return (
@@ -35,6 +43,8 @@ export default function ForgotPassword() {
         </Link>
       }
     >
+      {error && <div className={styles.errorAlert}>{error}</div>}
+
       {sent ? (
         <p className={styles.successMessage}>
           Si existe una cuenta asociada a <strong>{email}</strong>, recibirás un
@@ -63,7 +73,7 @@ export default function ForgotPassword() {
           </div>
 
           <button type="submit" className={styles.btnSubmit} disabled={loading}>
-            {loading ? <Spinner size="sm" /> : "Enviar enlace de restablecimiento"}
+            {loading ? <Spinner size="sm" isButton /> : "Enviar enlace de restablecimiento"}
           </button>
         </form>
       )}
