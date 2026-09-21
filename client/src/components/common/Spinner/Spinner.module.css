@@ -6,6 +6,7 @@
   gap: 16px;
   width: 100%;
   font-family: var(--font-sans);
+  color: var(--orange); /* En pantallas o vistas normales es naranja */
 }
 
 .fullscreen {
@@ -16,7 +17,15 @@
   padding: 32px 0;
 }
 
-/* Envoltura del isotipo */
+/* Modo compacto para botones */
+.buttonMode {
+  width: auto;
+  gap: 0;
+  padding: 0;
+  display: inline-flex;
+  color: #000000; /* En botones toma color negro para contrastar con el fondo naranja */
+}
+
 .logoWrapper {
   position: relative;
   display: inline-flex;
@@ -26,8 +35,8 @@
 
 /* Tamaños */
 .sm {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 
 .md {
