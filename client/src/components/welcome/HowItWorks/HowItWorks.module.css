@@ -1,0 +1,130 @@
+.section {
+  position: relative;
+  padding: clamp(3rem, 7vw, 7rem) 0;
+  border-top: 1px solid var(--border-action, rgba(255, 255, 255, 0.05));
+  scroll-margin-top: clamp(4rem, 6vw, 6rem);
+ }
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(0.875rem, 3vw, 1.5rem);
+}
+
+.header {
+  max-width: 768px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(0.7rem, 0.65rem + 0.2vw, 0.75rem);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--orange, #fd9f12);
+}
+
+.title {
+  margin: clamp(0.75rem, 2vw, 1rem) 0 0;
+  font-size: clamp(1.65rem, 3.5vw + 0.5rem, 2.35rem);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary, #ffffff);
+}
+
+.description {
+  margin: clamp(0.85rem, 2vw, 1.25rem) 0 0;
+  font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1.125rem);
+  line-height: 1.6;
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* Grilla con auto-fit y minmax: todas las tarjetas miden exactamente lo mismo */
+.stagesGrid {
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+  display: grid;
+  gap: clamp(0.75rem, 1.2vw, 1.25rem);
+  /* 5 columnas fijas con min-width para que nunca queden 4 arriba y 1 abajo */
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+@media (max-width: 1024px) {
+  .stagesGrid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    overflow-x: visible;
+  }
+}
+@media (max-width: 650px) {
+  .stagesGrid {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+  }
+}
+
+.stageItem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.stageCard {
+  position: relative;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--border-action, rgba(255, 255, 255, 0.08));
+  background-color: rgba(14, 20, 36, 0.5);
+  padding: clamp(1.1rem, 2.5vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.stageCard:hover {
+  border-color: rgba(253, 159, 18, 0.3);
+  background-color: rgba(14, 20, 36, 0.8);
+  transform: translateY(-4px);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iconWrapper {
+  width: clamp(40px, 5vw, 48px);
+  height: clamp(40px, 5vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background-color: rgba(253, 159, 18, 0.1);
+  color: var(--orange, #fd9f12);
+  border: 1px solid rgba(253, 159, 18, 0.2);
+}
+
+.stageNumber {
+  font-family: var(--font-mono, monospace);
+  font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  color: #64748b;
+  font-weight: 600;
+}
+
+.stageTitle {
+  margin: clamp(0.85rem, 2vw, 1.1rem) 0 0;
+  font-size: clamp(0.875rem, 0.82rem + 0.25vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary, #ffffff);
+}
+
+.stageDesc {
+  margin: 0.5rem 0 0;
+  font-size: clamp(0.78rem, 0.74rem + 0.2vw, 0.825rem);
+  line-height: 1.55;
+  color: var(--text-secondary, #94a3b8);
+}

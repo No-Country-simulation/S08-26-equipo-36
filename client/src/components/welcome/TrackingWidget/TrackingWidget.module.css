@@ -1,0 +1,104 @@
+.widgetForm {
+  margin-top: 2rem;
+  max-width: 580px;
+  scroll-margin-top: 6rem;
+}
+
+.card {
+  border-radius: 16px;
+  border: 1px solid var(--border-action, rgba(255, 255, 255, 0.08));
+  background-color: rgba(14, 20, 36, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 1.25rem;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25);
+}
+
+.label {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #ffffff);
+}
+
+.iconWrapper {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background-color: rgba(253, 159, 18, 0.15);
+  color: var(--orange, #fd9f12);
+}
+
+.inputGroup {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .inputGroup {
+    flex-direction: row;
+  }
+}
+
+.input {
+  height: 44px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-action, rgba(255, 255, 255, 0.1));
+  background-color: rgba(7, 10, 18, 0.7);
+  padding: 0 0.875rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  color: var(--text-primary, #ffffff);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input::placeholder {
+  color: #475569;
+}
+
+.input:focus {
+  outline: none;
+  border-color: rgba(253, 159, 18, 0.5);
+  box-shadow: 0 0 0 2px rgba(253, 159, 18, 0.2);
+}
+
+.btnSubmit {
+  height: 44px;
+  white-space: nowrap;
+  padding: 0 1.25rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background-color: var(--orange, #fd9f12);
+  color: #0b0f19;
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(253, 159, 18, 0.2);
+  transition: filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btnSubmit:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 18px rgba(253, 159, 18, 0.35);
+}
+
+.arrowIcon {
+  transition: transform 0.2s ease;
+}
+
+.btnSubmit:hover .arrowIcon {
+  transform: translateX(3px);
+}

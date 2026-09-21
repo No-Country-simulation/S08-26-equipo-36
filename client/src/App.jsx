@@ -20,6 +20,7 @@ import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import Spinner from "./components/common/Spinner/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import Welcome from "./pages/Welcome/Welcome";
 
 const AUTH_PROTECTION_ENABLED = true;
 
@@ -102,6 +103,9 @@ export default function App() {
     <Router>
       <AuthProvider>
         <Routes>
+          {/* Landing Page Pública */}
+          <Route path="/landing" element={<Welcome />} />
+
           {/* Rutas Públicas de Autenticación */}
           <Route element={<AuthLayoutWrapper />}>
             <Route path="/register" element={<Register />} />

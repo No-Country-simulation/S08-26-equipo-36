@@ -1,0 +1,14 @@
+.welcomeContainer {
+  min-height: 100vh;
+  background-color: var(--bg-primary, #070a12);
+  color: var(--text-primary, #ffffff);
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.mainContent {
+  flex: 1;
+  width: 100%;
+}
