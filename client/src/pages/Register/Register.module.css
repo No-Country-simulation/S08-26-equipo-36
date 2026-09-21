@@ -257,3 +257,8 @@
 .btnResend:hover {
   text-decoration: underline;
 }
+
+/* Spinner en naranja exclusivo para el botón de Google */
+.btnGoogle div[class*="loadingContainer"] {
+  color: var(--orange) !important;
+}

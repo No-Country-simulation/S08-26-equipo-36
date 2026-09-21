@@ -1,31 +1,28 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { LogIn, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import AuthLayout from "../../components/auth/AuthLayout/AuthLayout";
 import GoogleIcon from "../../components/auth/GoogleIcon";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Login.module.css";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleGoogleClick = () => {
-    setError("");
-    setLoading(true);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/");
-    }, 600);
-  };
+  const returnTo = new URLSearchParams(location.search).get("returnTo") || "/";
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -36,10 +33,29 @@ export default function Login() {
 
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      await signIn(email.trim(), password);
       setLoading(false);
-      navigate("/");
-    }, 600);
+      navigate(returnTo, { replace: true });
+    } catch (err) {
+      setLoading(false);
+      if (err.message?.includes("Invalid login credentials")) {
+        setError("Correo electrónico o contraseña incorrectos.");
+      } else {
+        setError(err.message || "Error al iniciar sesión.");
+      }
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setError("");
+      setGoogleLoading(true);
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message || "Error al conectar con Google.");
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -59,10 +75,14 @@ export default function Login() {
       <button
         type="button"
         className={styles.btnGoogle}
-        onClick={handleGoogleClick}
-        disabled={loading}
+        onClick={handleGoogleLogin}
+        disabled={loading || googleLoading}
       >
-        <GoogleIcon size={18} />
+        {googleLoading ? (
+          <Spinner size="sm" isButton color="orange" />
+        ) : (
+          <GoogleIcon size={18} />
+        )}
         Continuar con Google
       </button>
 
@@ -121,15 +141,21 @@ export default function Login() {
               onClick={() => setShowPassword(!showPassword)}
               className={styles.togglePasswordBtn}
               tabIndex={-1}
-              aria-label={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              aria-label={
+                showPassword ? "Ocultar contraseña" : "Ver contraseña"
+              }
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
         </div>
 
-        <button type="submit" className={styles.btnSubmit} disabled={loading}>
-          {loading ? <Spinner size="sm" /> : "Iniciar sesión"}
+        <button
+          type="submit"
+          className={styles.btnSubmit}
+          disabled={loading || googleLoading}
+        >
+          {loading ? <Spinner size="sm" isButton /> : "Iniciar sesión"}
         </button>
       </form>
     </AuthLayout>

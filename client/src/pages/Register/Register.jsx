@@ -1,13 +1,15 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import AuthLayout from "../../components/auth/AuthLayout/AuthLayout";
 import GoogleIcon from "../../components/auth/GoogleIcon";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Register.module.css";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { signUp, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,15 +18,10 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [error, setError] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Flujo OTP
-  const [showOtp, setShowOtp] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const otpInputsRef = useRef([]);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -40,109 +37,31 @@ export default function Register() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setInfoMessage("Código de verificación enviado.");
+    try {
+      await signUp(email.trim(), password);
       setLoading(false);
-      setShowOtp(true);
-    }, 600);
-  };
-
-  const handleOtpChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      otpInputsRef.current[index + 1]?.focus();
+      // Redirección directa al login
+      navigate("/login");
+    } catch (err) {
+      setLoading(false);
+      if (err.message?.includes("User already registered")) {
+        setError("Ya existe una cuenta registrada con este correo electrónico.");
+      } else {
+        setError(err.message || "Ocurrió un error al registrar la cuenta.");
+      }
     }
   };
 
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpInputsRef.current[index - 1]?.focus();
+  const handleGoogle = async () => {
+    try {
+      setError("");
+      setGoogleLoading(true);
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message || "Error al conectar con Google.");
+      setGoogleLoading(false);
     }
   };
-
-  const handleVerify = () => {
-    setError("");
-    const enteredCode = otp.join("");
-
-    if (enteredCode.length < 6) {
-      setError("Ingresá el código completo de 6 dígitos.");
-      return;
-    }
-
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/");
-    }, 600);
-  };
-
-  const handleResend = () => {
-    setOtp(["", "", "", "", "", ""]);
-    setInfoMessage("Nuevo código de verificación enviado.");
-    otpInputsRef.current[0]?.focus();
-  };
-
-  const handleGoogle = () => {
-    setError("");
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/");
-    }, 600);
-  };
-
-  if (showOtp) {
-    return (
-      <AuthLayout
-        icon={Mail}
-        title="Verificá tu correo"
-        subtitle={`Enviamos un código a ${email}`}
-      >
-        {infoMessage && <div className={styles.successAlert}>{infoMessage}</div>}
-        {error && <div className={styles.errorAlert}>{error}</div>}
-
-        <div className={styles.otpInputsContainer}>
-          {otp.map((digit, idx) => (
-            <input
-              key={idx}
-              ref={(el) => (otpInputsRef.current[idx] = el)}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleOtpChange(idx, e.target.value)}
-              onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-              className={styles.otpInputSlot}
-              autoFocus={idx === 0}
-            />
-          ))}
-        </div>
-
-        <button
-          type="button"
-          className={styles.btnSubmit}
-          onClick={handleVerify}
-          disabled={loading || otp.join("").length < 6}
-        >
-          {loading ? <Spinner size="sm" /> : "Verificar"}
-        </button>
-
-        <p className={styles.otpFooterText}>
-          ¿No recibiste el código?{" "}
-          <button type="button" onClick={handleResend} className={styles.btnResend}>
-            Reenviar
-          </button>
-        </p>
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout
@@ -162,9 +81,13 @@ export default function Register() {
         type="button"
         className={styles.btnGoogle}
         onClick={handleGoogle}
-        disabled={loading}
+        disabled={loading || googleLoading}
       >
-        <GoogleIcon size={18} />
+        {googleLoading ? (
+          <Spinner size="sm" isButton />
+        ) : (
+          <GoogleIcon size={18} />
+        )}
         Continúa con Google
       </button>
 
@@ -252,8 +175,12 @@ export default function Register() {
           </div>
         </div>
 
-        <button type="submit" className={styles.btnSubmit} disabled={loading}>
-          {loading ? <Spinner size="sm" /> : "Crear cuenta"}
+        <button
+          type="submit"
+          className={styles.btnSubmit}
+          disabled={loading || googleLoading}
+        >
+          {loading ? <Spinner size="sm" isButton /> : "Crear cuenta"}
         </button>
       </form>
     </AuthLayout>

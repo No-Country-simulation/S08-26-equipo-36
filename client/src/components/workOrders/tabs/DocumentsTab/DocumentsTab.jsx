@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import ConfirmDialog from "../../../common/ConfirmDialog/ConfirmDialog";
 import PDFViewerModal from "../../../pdf/PDFViewerModal";
-import { supabase } from "../../../../api/supabaseClient";
+import { supabase } from "../../../../lib/supabase";
 import { api } from "../../../../api/apiClient";
 import styles from "./DocumentsTab.module.css";
 

@@ -9,6 +9,7 @@ import {
   Wrench,
   LogOut,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Sidebar.module.css";
 
 const navItems = [
@@ -23,17 +24,27 @@ const navItems = [
 export default function Sidebar({ onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const isOTDetail = location.pathname.startsWith("/ordenes/");
 
-  const handleLogout = () => {
-    // Limpia la sesión del usuario en localStorage
-    localStorage.removeItem("qualitytrack_user");
+  const handleLogout = async () => {
+    try {
+      // 1. Cierra la sesión activa en Supabase y limpia el storage real
+      await signOut();
 
-    // Ejecuta callback si existe, o redirige directamente a login
-    if (onLogout) {
-      onLogout();
+      // 2. Limpieza legacy por compatibilidad
+      localStorage.removeItem("qualitytrack_user");
+
+      // 3. Callback opcional
+      if (onLogout) {
+        onLogout();
+      }
+
+      // 4. Redirige a login
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
     }
-    navigate("/login");
   };
 
   return (

@@ -5,7 +5,10 @@ export default function Spinner({
   text = null,
   fullScreen = false,
   isButton = false,
+  color = "default", // "default" | "orange"
 }) {
+  const colorStyle = color === "orange" ? { color: "var(--accent-orange, #f59e0b)" } : {};
+
   return (
     <div
       className={`${styles.loadingContainer} ${
@@ -15,6 +18,7 @@ export default function Spinner({
           ? styles.buttonMode
           : styles.inline
       }`}
+      style={colorStyle}
       role="status"
       aria-label="Cargando..."
     >
@@ -87,7 +91,7 @@ export default function Spinner({
                 gradientUnits="userSpaceOnUse"
               >
                 <stop offset="0%" stopColor="currentColor" stopOpacity="0.33" />
-                <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
               </linearGradient>
             </defs>
 

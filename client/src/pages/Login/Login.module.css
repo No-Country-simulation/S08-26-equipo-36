@@ -215,3 +215,8 @@
   text-decoration: underline;
   opacity: 0.9;
 }
+
+/* Spinner en naranja exclusivo para el botón de Google */
+.btnGoogle div[class*="loadingContainer"] {
+  color: var(--orange) !important;
+}
