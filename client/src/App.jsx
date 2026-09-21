@@ -11,20 +11,26 @@ import Register from "./pages/Register/Register";
 import Login from "./pages/Login/Login";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword/ResetPassword";
+import Spinner from "./components/common/Spinner/Spinner";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
-// Cambiar a `true` al habilitar la protección con credenciales reales
+// Cambiar a `true` cuando queramos exigir login obligatorio
 const AUTH_PROTECTION_ENABLED = false;
 
 function ProtectedRoute() {
   const location = useLocation();
+  const { user, loading } = useAuth();
 
   if (!AUTH_PROTECTION_ENABLED) {
     return <Outlet />;
   }
 
-  const storedUser = localStorage.getItem("qualitytrack_user");
+  // Mientras Supabase verifica la sesión en el inicio, mostramos el spinner institucional
+  if (loading) {
+    return <Spinner fullScreen text="Verificando credenciales..." />;
+  }
 
-  if (!storedUser) {
+  if (!user) {
     return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
@@ -90,7 +96,9 @@ function AppLayout() {
 export default function App() {
   return (
     <Router>
-      <AppLayout />
+      <AuthProvider>
+        <AppLayout />
+      </AuthProvider>
     </Router>
   );
 }
