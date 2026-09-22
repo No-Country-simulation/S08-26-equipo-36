@@ -355,9 +355,9 @@
 }
 
 .statusPendiente {
-  background-color: var(--yellow-glow);
+  background-color: var(--amber-glow);
   color: var(--status-pause);
-  border-color: var(--yellow-border);
+  border-color: var(--amber-border);
 }
 
 .statusAprobada {
