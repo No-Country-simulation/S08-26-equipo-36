@@ -4,10 +4,12 @@ import styles from "./ContactForm.module.css";
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
-    nombre: "",
+    fullName: "",
+    company: "",
     email: "",
-    telefono: "",
-    mensaje: "",
+    phone: "",
+    piece: "",
+    message: "",
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -22,14 +24,13 @@ export default function ContactForm() {
     setLoading(true);
 
     try {
-      // Endpoint pensado para alimentar la bandeja de /consultas
-      // const res = await fetch("/api/consultas", {
+      // POST pensado para alimentar la bandeja de /inquiries
+      // const res = await fetch("/api/inquiries", {
       //   method: "POST",
       //   headers: { "Content-Type": "application/json" },
       //   body: JSON.stringify(formData),
       // });
       
-      // Simulación inmediata para validar flujo
       setTimeout(() => {
         setSubmitted(true);
         setLoading(false);
@@ -66,16 +67,31 @@ export default function ContactForm() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className={styles.form}>
+              {/* Fila 1: Contacto Principal */}
               <div className={styles.inputRow}>
                 <div className={styles.field}>
-                  <label htmlFor="nombre" className={styles.label}>Nombre / Empresa *</label>
+                  <label htmlFor="fullName" className={styles.label}>Nombre y apellido *</label>
                   <input
                     type="text"
-                    id="nombre"
-                    name="nombre"
+                    id="fullName"
+                    name="fullName"
                     required
-                    placeholder="Ej: Juan Pérez - Mecánica Sur"
-                    value={formData.nombre}
+                    placeholder="Ej: Juan Pérez"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    className={styles.input}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="company" className={styles.label}>Empresa / Taller *</label>
+                  <input
+                    type="text"
+                    id="company"
+                    name="company"
+                    required
+                    placeholder="Ej: Mecánica Sur S.A."
+                    value={formData.company}
                     onChange={handleChange}
                     className={styles.input}
                   />
@@ -94,30 +110,48 @@ export default function ContactForm() {
                     className={styles.input}
                   />
                 </div>
+              </div>
 
+              {/* Fila 2: Teléfono y Pieza/Requerimiento */}
+              <div className={styles.inputRow2}>
                 <div className={styles.field}>
-                  <label htmlFor="telefono" className={styles.label}>Teléfono</label>
+                  <label htmlFor="phone" className={styles.label}>Teléfono / WhatsApp</label>
                   <input
                     type="tel"
-                    id="telefono"
-                    name="telefono"
-                    placeholder="+54 9 ..."
-                    value={formData.telefono}
+                    id="phone"
+                    name="phone"
+                    placeholder="+54 9 351..."
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className={styles.input}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="piece" className={styles.label}>Pieza o trabajo a cotizar *</label>
+                  <input
+                    type="text"
+                    id="piece"
+                    name="piece"
+                    required
+                    placeholder="Ej: Eje estriado, Buje de bronce, Brida..."
+                    value={formData.piece}
                     onChange={handleChange}
                     className={styles.input}
                   />
                 </div>
               </div>
 
+              {/* Fila 3: Mensaje detallado */}
               <div className={styles.field}>
-                <label htmlFor="mensaje" className={styles.label}>Consulta o requerimiento *</label>
+                <label htmlFor="message" className={styles.label}>Detalles o especificaciones *</label>
                 <textarea
-                  id="mensaje"
-                  name="mensaje"
+                  id="message"
+                  name="message"
                   required
                   rows={4}
-                  placeholder="Detallá tu pieza, material, tolerancias estimadas o dudas generales..."
-                  value={formData.mensaje}
+                  placeholder="Detallá cantidad estimada, material si lo conocés, tolerancias o dudas generales..."
+                  value={formData.message}
                   onChange={handleChange}
                   className={styles.textarea}
                 />

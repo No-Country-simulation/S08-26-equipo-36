@@ -90,8 +90,15 @@
   gap: clamp(0.75rem, 1.5vw, 1.25rem);
 }
 
+.inputRow2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
+}
+
 @media (max-width: 768px) {
-  .inputRow {
+  .inputRow,
+  .inputRow2 {
     grid-template-columns: 1fr;
   }
 }

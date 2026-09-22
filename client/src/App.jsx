@@ -14,6 +14,7 @@ import Quotes from "./pages/Quotes/Quotes";
 import WorkOrders from "./pages/WorkOrders/WorkOrders";
 import WorkOrderDetails from "./pages/WorkOrderDetails/WorkOrderDetails";
 import Taller from "./pages/ShopFloor/ShopFloor";
+import Inquiries from "./pages/Inquiries/Inquiries";
 import Register from "./pages/Register/Register";
 import Login from "./pages/Login/Login";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
@@ -119,6 +120,7 @@ export default function App() {
             <Route element={<InternalLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/clientes" element={<Clientes />} />
+              <Route path="/consultas" element={<Inquiries />} />
               <Route path="/solicitudes" element={<Solicitudes />} />
               <Route path="/cotizaciones" element={<Quotes />} />
               <Route path="/ordenes" element={<WorkOrders />} />

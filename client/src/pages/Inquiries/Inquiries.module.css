@@ -1,0 +1,255 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+  padding: clamp(1rem, 2vw, 2rem);
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.titleGroup h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 2vw, 1.85rem);
+  color: var(--text-primary, #ffffff);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.titleGroup p {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary, #94a3b8);
+  font-size: clamp(0.85rem, 1vw, 0.95rem);
+}
+
+/* Filtros por pestaña */
+.filtersBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: var(--bg-card, #0e1424);
+  padding: 0.75rem 1.25rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.statusTabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #94a3b8);
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.825rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tabBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tabActive {
+  background-color: rgba(253, 159, 18, 0.15) !important;
+  color: var(--orange, #fd9f12) !important;
+  font-weight: 600;
+}
+
+.counterBadge {
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+}
+
+/* Tabla */
+.tableCard {
+  background-color: var(--bg-card, #0e1424);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.table th {
+  background-color: rgba(11, 15, 25, 0.5);
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 600;
+  padding: 0.875rem 1rem;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.row:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.dateCol {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.775rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.contactCol strong {
+  display: block;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.companyText {
+  display: block;
+  font-size: 0.785rem;
+  color: #94a3b8;
+}
+
+.messageCol {
+  max-width: 340px;
+  white-space: normal;
+  line-height: 1.45;
+  color: #e2e8f0;
+}
+
+/* Badges de estado */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeNew {
+  background-color: rgba(253, 159, 18, 0.15);
+  color: #fd9f12;
+  border: 1px solid rgba(253, 159, 18, 0.3);
+}
+
+.badgeContacted {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.badgeConverted {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgeDiscarded {
+  background-color: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* Columna de acciones */
+.actionsCol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.actionIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+img{
+    width: 50%;
+    height: auto;
+    object-fit: cover;
+ }
+
+.actionIconBtn:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btnConvert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(253, 159, 18, 0.3);
+  background-color: rgba(253, 159, 18, 0.1);
+  color: var(--orange, #fd9f12);
+  font-size: 0.785rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnConvert:hover {
+  background-color: var(--orange, #fd9f12);
+  color: #0b0f19;
+}
+
+.btnConvert:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.emptyState {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--text-secondary, #94a3b8);
+}

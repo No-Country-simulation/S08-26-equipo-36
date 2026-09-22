@@ -15,6 +15,7 @@ import styles from "./Sidebar.module.css";
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/clientes", label: "Clientes", icon: Users },
+  { to: "/consultas", label: "Consultas", icon: Users },
   { to: "/solicitudes", label: "Solicitudes", icon: FileText },
   { to: "/cotizaciones", label: "Cotizaciones", icon: FileCheck },
   { to: "/ordenes", label: "Órdenes de Trabajo", icon: ClipboardList },
