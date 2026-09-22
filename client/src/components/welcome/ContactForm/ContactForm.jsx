@@ -24,19 +24,24 @@ export default function ContactForm() {
     setLoading(true);
 
     try {
-      // POST pensado para alimentar la bandeja de /inquiries
-      // const res = await fetch("/api/inquiries", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(formData),
-      // });
-      
-      setTimeout(() => {
-        setSubmitted(true);
-        setLoading(false);
-      }, 600);
+      // Apuntamos directamente a la URL completa del backend de Flask
+      const response = await fetch("http://localhost:5000/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al enviar la consulta");
+      }
+
+      setSubmitted(true);
     } catch (error) {
       console.error("Error al enviar consulta:", error);
+      alert("Hubo un error al enviar la consulta. Revisa la consola.");
+    } finally {
       setLoading(false);
     }
   };

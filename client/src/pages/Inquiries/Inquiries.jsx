@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Inbox,
   MessageSquare,
@@ -9,12 +9,34 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import { MOCK_INQUIRIES } from "../../mocks/inquiriesData";
 import styles from "./Inquiries.module.css";
 
 export default function Inquiries() {
-  const [inquiries, setInquiries] = useState(MOCK_INQUIRIES);
+  const [inquiries, setInquiries] = useState([]);
   const [filter, setFilter] = useState("all");
+
+  // Cargar las consultas reales desde el backend de Flask al abrir la vista
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_API_BASE_URL}/inquiries`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          const formatted = data.data.map((item) => ({
+            id: item.id,
+            fullName: item.full_name,
+            company: item.company,
+            email: item.email,
+            phone: item.phone,
+            piece: item.piece,
+            description: item.message,
+            status: item.status,
+            createdAt: item.created_at,
+          }));
+          setInquiries(formatted);
+        }
+      })
+      .catch((err) => console.error("Error al cargar las consultas:", err));
+  }, []);
 
   const filteredInquiries = inquiries.filter((item) => {
     if (filter === "all") return true;
@@ -53,9 +75,8 @@ export default function Inquiries() {
   };
 
   const handleConvertToRequest = (inquiry) => {
-    // Listo para conectar con el formulario de creación de Solicitudes (/requests/new)
     alert(
-      `Listo para transformar la consulta de ${inquiry.fullName} en una Solicitud Formal.`,
+      `Listo para transformar la consulta de ${inquiry.fullName} en una Solicitud Formal.`
     );
   };
 
@@ -121,12 +142,14 @@ export default function Inquiries() {
                 filteredInquiries.map((inq) => (
                   <tr key={inq.id} className={styles.row}>
                     <td className={styles.dateCol}>
-                      {new Date(inq.createdAt).toLocaleDateString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {inq.createdAt
+                        ? new Date(inq.createdAt).toLocaleDateString("es-AR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Fecha s/d"}
                     </td>
                     <td className={styles.contactCol}>
                       <strong>{inq.fullName}</strong>
@@ -139,19 +162,6 @@ export default function Inquiries() {
                         >
                           {inq.piece || "Consulta general"}
                         </strong>
-                        {(inq.material || inq.quantity) && (
-                          <span
-                            style={{
-                              color: "#fd9f12",
-                              fontSize: "0.75rem",
-                              marginLeft: "0.5rem",
-                            }}
-                          >
-                            [{inq.material || "Mat. s/d"} ·{" "}
-                            {inq.quantity ? `${inq.quantity} un.` : "Cant. s/d"}
-                            ]
-                          </span>
-                        )}
                       </div>
                       <p
                         style={{
@@ -175,13 +185,13 @@ export default function Inquiries() {
                           <Mail size={15} />
                         </a>
                         <a
-                          href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, "")}`}
+                          href={`https://wa.me/${inq.phone ? inq.phone.replace(/[^0-9]/g, "") : ""}`}
                           target="_blank"
                           rel="noreferrer"
                           className={styles.actionIconBtn}
                           title="Contactar vía WhatsApp"
                         >
-                          <img src="whatsapp-outline.svg" alt="Whatsapp" />
+                          <Phone size={15} />
                         </a>
                         <button
                           onClick={() => handleConvertToRequest(inq)}
@@ -215,6 +225,6 @@ export default function Inquiries() {
           </table>
         </div>
       </div>
-    </div>
+    </div>  
   );
 }

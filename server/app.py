@@ -5,8 +5,7 @@ from flask_cors import CORS
 from db import get_db_connection
 
 app = Flask(__name__)
-CORS(app)
-
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 # --- STATUS ---
 @app.route('/api/status', methods=['GET'])
 def status():
@@ -1167,6 +1166,113 @@ def eliminar_entrega(id_entrega):
         cursor.execute("DELETE FROM entregas WHERE id_entrega = %s", (id_entrega,))
         conexion.commit()
         return jsonify({"status": "success", "message": "Entrega eliminada"}), 200
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+
+
+
+@app.route('/api/inquiries', methods=['POST'])
+def crear_inquiry():
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
+    try:
+        datos = request.get_json() or {}
+        full_name = datos.get('fullName') or datos.get('full_name')
+        company = datos.get('company')
+        email = datos.get('email')
+        phone = datos.get('phone', '')
+        piece = datos.get('piece')
+        message = datos.get('message')
+
+        # Validación de campos obligatorios
+        if not full_name or not company or not email or not piece or not message:
+            return jsonify({"status": "error", "message": "Faltan campos obligatorios (fullName, company, email, piece, message)"}), 400
+
+        cursor = conexion.cursor()
+        sql = """
+            INSERT INTO inquiries (full_name, company, email, phone, piece, message, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, 'new', NOW())
+        """
+        cursor.execute(sql, (full_name, company, email, phone, piece, message))
+        conexion.commit()
+        nuevo_id = cursor.lastrowid
+
+        return jsonify({
+            "status": "success",
+            "message": "Consulta creada exitosamente",
+            "data": {"id": nuevo_id, **datos, "status": "new"}
+        }), 201
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+
+
+@app.route('/api/inquiries', methods=['GET'])
+def listar_inquiries():
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        status_filter = request.args.get('status')
+
+        if status_filter:
+            sql = """
+                SELECT id, full_name, company, email, phone, piece, message, status, created_at
+                FROM inquiries
+                WHERE status = %s
+                ORDER BY created_at DESC
+            """
+            cursor.execute(sql, (status_filter,))
+        else:
+            sql = """
+                SELECT id, full_name, company, email, phone, piece, message, status, created_at
+                FROM inquiries
+                ORDER BY created_at DESC
+            """
+            cursor.execute(sql)
+
+        filas = cursor.fetchall()
+        for f in filas:
+            if isinstance(f.get('created_at'), (datetime.date, datetime.datetime)):
+                f['created_at'] = f['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+
+        return jsonify({"status": "success", "data": filas}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+
+
+@app.route('/api/inquiries/<int:id_inquiry>/status', methods=['PATCH'])
+def actualizar_estado_inquiry(id_inquiry):
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
+    try:
+        datos = request.get_json() or {}
+        nuevo_estado = (datos.get('status') or '').lower()
+
+        # Validar que el estado pertenezca al ENUM permitido
+        estados_validos = ['new', 'contacted', 'converted', 'discarded']
+        if nuevo_estado not in estados_validos:
+            return jsonify({"status": "error", "message": f"Estado no válido. Use uno de: {estados_validos}"}), 400
+
+        cursor = conexion.cursor()
+        sql = "UPDATE inquiries SET status = %s WHERE id = %s"
+        cursor.execute(sql, (nuevo_estado, id_inquiry))
+        conexion.commit()
+
+        return jsonify({"status": "success", "message": "Estado de la consulta actualizado correctamente"}), 200
     except Exception as e:
         conexion.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
