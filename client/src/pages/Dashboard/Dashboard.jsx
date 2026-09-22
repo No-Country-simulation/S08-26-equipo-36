@@ -1,17 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ClipboardList, Wrench, ShieldCheck, CheckCircle2, Box } from "lucide-react";
+import { Plus, ClipboardList, Wrench, ShieldCheck, CheckCircle2 } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import NewOrderModal from "../../components/dashboard/NewOrderModal/NewOrderModal";
+import KanbanBoard from "../../components/dashboard/kanban/KanbanBoard"; // 👈 Tu componente modular
 import { api } from "../../api/apiClient";
 import styles from "./Dashboard.module.css";
-
-const COLUMNS = [
-  { id: "creada", label: "Creada", colorClass: styles.colCreada },
-  { id: "en_proceso", label: "En Mecanizado", colorClass: styles.colMecanizado },
-  { id: "control_calidad", label: "Control de Calidad", colorClass: styles.colCalidad },
-  { id: "liberada", label: "Liberada", colorClass: styles.colLiberada }
-];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -20,7 +14,6 @@ export default function Dashboard() {
   const [ots, setOts] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [dragOverCol, setDragOverCol] = useState(null);
 
   // Cargar órdenes y clientes desde MySQL
   const loadDashboardData = useCallback(async () => {
@@ -67,42 +60,25 @@ export default function Dashboard() {
     };
   }, [loadDashboardData]);
 
-  // Drag & Drop con persistencia directa a MySQL
-  const handleDragStart = (e, id) => {
-    e.dataTransfer.setData("text/plain", String(id));
-    e.dataTransfer.effectAllowed = "move";
-  };
+  // Manejo de cambio de estado (Drag & Drop) hacia la API
+const handleMove = async (ot, targetStatus) => {
+  // 1. Actualización optimista en React
+  setOts((prev) =>
+    prev.map((o) => (String(o.id) === String(ot.id) ? { ...o, estado: targetStatus } : o))
+  );
 
-  const handleDragOver = (e, colId) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (dragOverCol !== colId) setDragOverCol(colId);
-  };
+  // 2. Mapeo para MySQL: la columna 'liberada' corresponde a 'finalizada' en la BD
+  const backendStatus = targetStatus === "liberada" ? "finalizada" : targetStatus;
 
-  const handleDragLeave = (colId) => {
-    if (dragOverCol === colId) setDragOverCol(null);
-  };
-
-  const handleDrop = async (e, targetColId) => {
-    e.preventDefault();
-    setDragOverCol(null);
-    const otId = e.dataTransfer.getData("text/plain");
-    if (!otId) return;
-
-    // Actualización optimista en la interfaz
-    setOts((prev) =>
-      prev.map((ot) => (String(ot.id) === String(otId) ? { ...ot, estado: targetColId } : ot))
-    );
-
-    try {
-      if (typeof api.actualizarEstadoOrden === "function") {
-        await api.actualizarEstadoOrden(otId, targetColId);
-      }
-    } catch (err) {
-      console.error("[Dashboard] Error actualizando estado de orden vía drag & drop:", err);
-      loadDashboardData();
+  try {
+    if (typeof api.actualizarEstadoOrden === "function") {
+      await api.actualizarEstadoOrden(ot.id, backendStatus);
     }
-  };
+  } catch (err) {
+    console.error("[Dashboard] Error actualizando estado de orden vía drag & drop:", err);
+    loadDashboardData();
+  }
+};
 
   const handleCardClick = (ot) => {
     navigate(`/ordenes/${ot.id}`);
@@ -120,14 +96,14 @@ export default function Dashboard() {
   // Contadores normalizados
   const enMecanizado = ots.filter((o) => o.estado === "en_proceso" || o.estado === "mecanizado").length;
   const controlCalidad = ots.filter((o) => o.estado === "control_calidad" || o.estado === "calidad").length;
-  const liberadas = ots.filter((o) => o.estado === "liberada" || o.estado === "finalizada").length;
+ const liberadas = ots.filter((o) => o.estado === "liberada" || o.estado === "finalizada" || o.estado === "entregada").length;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Centro de Operaciones</h1>
-          <p className={styles.subtitle}>Flujo de órdenes en tiempo real · arrastrá las tarjetas para cambiar de estado.</p>
+          <p className={styles.subtitle}>Flujo de órdenes en tiempo real (arrastrá las tarjetas para cambiar de estado).</p>
         </div>
         <button type="button" onClick={() => setIsModalOpen(true)} className={styles.btnPrimary}>
           <Plus size={16} strokeWidth={2.5} /> Nueva Orden de Trabajo
@@ -189,78 +165,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Tablero Kanban */}
-      <div className={styles.kanbanGrid}>
-        {COLUMNS.map((col) => {
-          const colOts = ots.filter((o) => {
-            if (col.id === "en_proceso") return o.estado === "en_proceso" || o.estado === "mecanizado";
-            if (col.id === "control_calidad") return o.estado === "control_calidad" || o.estado === "calidad";
-            if (col.id === "liberada") return o.estado === "liberada" || o.estado === "finalizada";
-            return o.estado === col.id;
-          });
-
-          const isOver = dragOverCol === col.id;
-
-          return (
-            <div
-              key={col.id}
-              className={`${styles.column} ${isOver ? styles.columnDragOver : ""}`}
-              onDragOver={(e) => handleDragOver(e, col.id)}
-              onDragLeave={() => handleDragLeave(col.id)}
-              onDrop={(e) => handleDrop(e, col.id)}
-            >
-              <div className={styles.colHeader}>
-                <div className={styles.colTitleRow}>
-                  <span className={`${styles.dot} ${col.colorClass}`} />
-                  <span className={styles.colTitle}>{col.label}</span>
-                </div>
-                <span className={styles.colBadge}>{colOts.length}</span>
-              </div>
-
-              <div className={styles.cardList}>
-                {colOts.length === 0 ? (
-                  <div className={styles.emptyCol}>Sin órdenes</div>
-                ) : (
-                  colOts.map((ot) => (
-                    <div
-                      key={ot.id}
-                      className={styles.otCard}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, ot.id)}
-                      onClick={() => handleCardClick(ot)}
-                    >
-                      <div className={styles.cardHeader}>
-                        <span className={styles.otCode}>
-                          {ot.numero || `OT-${String(ot.id).padStart(4, "0")}`}
-                        </span>
-                        <span className={`${styles.cornerDot} ${col.colorClass}`} />
-                      </div>
-
-                      <h4 className={styles.pieceName}>{ot.pieza || "Pieza en proceso"}</h4>
-                      <p className={styles.client}>{ot.cliente}</p>
-
-                      <div className={styles.cardFooter}>
-                        <span className={styles.qtyRow}>
-                          <Box size={13} /> {Number(ot.cantidad) || 1} u.
-                        </span>
-                        <span
-                          className={`${styles.priorityBadge} ${
-                            ot.prioridad === "Alta" || ot.prioridad === "Urgente"
-                              ? styles.prioAlta
-                              : styles.prioMedia
-                          }`}
-                        >
-                          • {ot.prioridad}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Tablero Kanban modular */}
+      <KanbanBoard ots={ots} onMove={handleMove} onCardClick={handleCardClick} />
 
       <NewOrderModal
         isOpen={isModalOpen}

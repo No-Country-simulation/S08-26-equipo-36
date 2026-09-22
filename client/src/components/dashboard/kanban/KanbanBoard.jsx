@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Calendar, Box } from "lucide-react";
 import styles from "./KanbanBoard.module.css";
 
 const COLUMNS = [
@@ -42,21 +43,41 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
     }
   };
 
+  const formatDate = (dateValue) => {
+    if (!dateValue) return null;
+    try {
+      const cleanDate = typeof dateValue === "string" ? dateValue.split("T")[0].split(" ")[0] : "";
+      if (cleanDate.includes("-")) {
+        const [year, month, day] = cleanDate.split("-");
+        return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+      }
+      const d = new Date(dateValue);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+      }
+    } catch {
+      return String(dateValue);
+    }
+    return String(dateValue);
+  };
+
   return (
     <div className={styles.boardContainer}>
       {COLUMNS.map((col) => {
-        const columnOts = ots.filter((ot) => {
-          if (col.id === "en_proceso") {
-            return ["en_proceso", "mecanizado"].includes(ot.estado);
-          }
-          if (col.id === "control_calidad") {
-            return ["control_calidad", "calidad"].includes(ot.estado);
-          }
-          if (col.id === "liberada") {
-            return ["liberada", "finalizada", "entregada"].includes(ot.estado);
-          }
-          return ot.estado === col.id;
-        });
+      const columnOts = ots.filter((ot) => {
+  const currentStatus = ot.estado || ot.estado_actual;
+
+  if (col.id === "en_proceso") {
+    return ["en_proceso", "mecanizado"].includes(currentStatus);
+  }
+  if (col.id === "control_calidad") {
+    return ["control_calidad", "calidad"].includes(currentStatus);
+  }
+  if (col.id === "liberada") {
+    return ["liberada", "finalizada", "entregada"].includes(currentStatus);
+  }
+  return currentStatus === col.id;
+});
 
         return (
           <div
@@ -66,7 +87,7 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
             onDragLeave={() => setDragOverCol(null)}
             onDrop={(e) => handleDrop(e, col.id)}
           >
-            {/* Cabecera de la columna */}
+            {/* Cabecera Columna */}
             <div className={styles.columnHeader}>
               <div className={styles.columnTitleWrap}>
                 <span className={`${styles.statusDot} ${col.colorClass}`} />
@@ -75,19 +96,22 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
               <span className={styles.countBadge}>{columnOts.length}</span>
             </div>
 
-            {/* Lista de tarjetas */}
+            {/* Lista de Tarjetas */}
             <div className={styles.cardList}>
               {columnOts.length === 0 ? (
                 <div className={styles.emptyCol}>Sin órdenes</div>
               ) : (
                 columnOts.map((ot) => {
-                  const prio = (ot.prioridad || "media").toLowerCase();
+                  const prio = (ot.prioridad || "Media").toLowerCase();
                   const priorityClass =
                     prio === "alta" || prio === "urgente"
                       ? styles.priorityHigh
                       : prio === "baja"
                       ? styles.priorityLow
                       : styles.priorityMed;
+
+                  const rawDate = ot.fecha_creacion || ot.fecha_inicio || ot.created_at;
+                  const formattedDate = formatDate(rawDate);
 
                   return (
                     <div
@@ -97,23 +121,39 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
                       onClick={() => handleClick(ot)}
                       className={styles.card}
                     >
+                      {/* Top: OT Code a la izq, Dot a la derecha */}
                       <div className={styles.cardTop}>
                         <span className={styles.otNumber}>
                           {ot.numero || `OT-${String(ot.id).padStart(4, "0")}`}
                         </span>
-                        <span className={styles.clientName}>
-                          {ot.cliente_nombre || ot.cliente || "S/C"}
-                        </span>
+                        <span className={`${styles.cornerDot} ${col.colorClass}`} />
                       </div>
 
+                      {/* Pieza y Cliente debajo */}
                       <h4 className={styles.pieceTitle}>{ot.pieza || "Pieza en proceso"}</h4>
+                      <p className={styles.clientName}>
+                        {ot.cliente_nombre || ot.cliente || "Cliente General"}
+                      </p>
 
-                      <div className={styles.cardMeta}>
-                        <span>
-                          Cant: <strong>{ot.cantidad || 1}</strong>
-                        </span>
+                      {/* Línea divisoria y pie con cantidad/fecha y prioridad */}
+                      <div className={styles.cardFooter}>
+                        <div className={styles.metaCol}>
+                          <div className={styles.metaRow}>
+                            <Box size={13} className={styles.metaIcon} />
+                            <span>{Number(ot.cantidad) || 1} u.</span>
+                          </div>
+
+                          {formattedDate && (
+                            <div className={styles.metaRow}>
+                              <Calendar size={13} className={styles.metaIcon} />
+                              <span className={styles.dateText}>{formattedDate}</span>
+                            </div>
+                          )}
+                        </div>
+
                         <span className={`${styles.priorityPill} ${priorityClass}`}>
-                          {ot.prioridad || "media"}
+                          <span className={styles.prioDot} />
+                          {ot.prioridad || "Media"}
                         </span>
                       </div>
                     </div>

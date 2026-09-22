@@ -144,31 +144,31 @@
 .iconSlate {
   background-color: var(--border-subtle);
   border: 1px solid var(--border-medium);
-  color: var(--slate);
+  color: var(--text-muted);
 }
 
 .iconOrange {
   background-color: var(--orange-glow);
   border: 1px solid var(--orange-border);
-  color: var(--orange);
+  color: var(--text-muted);
 }
 
 .iconAmber {
-  background-color: var(--yellow-glow);
-  border: 1px solid var(--yellow-border);
-  color: var(--status-pause);
+  background-color: var(--amber-glow);
+  border: 1px solid var(--amber-border);
+  color: var(--text-muted);;
 }
 
 .iconGreen {
   background-color: var(--green-glow);
   border: 1px solid var(--green-border);
-  color: var(--status-done);
+  color: var(--text-muted);
 }
 
 /* Glows */
 .glowSlate { background-color: var(--slate); }
 .glowOrange { background-color: var(--orange); }
-.glowAmber { background-color: var(--yellow); }
+.glowAmber { background-color: var(--amber); }
 .glowGreen { background-color: var(--green); }
 
 /* Tablero Kanban */
@@ -249,7 +249,7 @@
 /* Colores de columna e indicadores */
 .colCreada { background-color: var(--slate); }
 .colMecanizado { background-color: var(--orange); }
-.colCalidad { background-color: var(--yellow); }
+.colCalidad { background-color: var(--amber); }
 .colLiberada { background-color: var(--green); }
 
 .cardList {

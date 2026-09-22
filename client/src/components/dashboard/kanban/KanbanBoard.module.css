@@ -22,8 +22,8 @@
 
 /* Columna individual */
 .column {
-  background: var(--bg-sidebar);
-  border: 1px solid var(--border);
+  background: var(--bg-sidebar, #0e1424);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -33,8 +33,8 @@
 }
 
 .columnDraggingOver {
-  background-color: var(--border-subtle);
-  border-color: var(--border-focus);
+  background-color: var(--border-subtle, rgba(255, 255, 255, 0.03));
+  border-color: var(--border-focus, #fd9f12);
 }
 
 .columnHeader {
@@ -43,7 +43,7 @@
   justify-content: space-between;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
 }
 
 .columnTitleWrap {
@@ -59,24 +59,23 @@
   flex-shrink: 0;
 }
 
-.dotCreada { background-color: var(--slate); }
-.dotMecanizado { background-color: var(--orange); }
-.dotCalidad { background-color: var(--yellow); }
-.dotLiberada { background-color: var(--green); }
+.dotCreada { background-color: var(--slate, #94a3b8); }
+.dotMecanizado { background-color: var(--orange, #fd9f12); }
+.dotCalidad { background-color: var(--amber, #f59e0b); }
+.dotLiberada { background-color: var(--green, #10b981); }
 
 .columnTitle {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: var(--text-white);
-  text-transform: uppercase;
+  color: var(--text-white, #ffffff);
 }
 
 .countBadge {
-  background: var(--border-subtle);
-  border: 1px solid var(--border-medium);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
+  background: var(--border-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.1));
+  color: var(--text-muted, #94a3b8);
+  font-family: var(--font-mono, monospace);
   font-size: 11px;
   font-weight: 700;
   padding: 2px 7px;
@@ -94,22 +93,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--slate);
+  color: var(--slate, #94a3b8);
   font-size: 13px;
   min-height: 180px;
 }
 
-/* Tarjeta OT */
+/* ==================== TARJETA OT ==================== */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px;
+  background: #0b0f19;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 16px;
   cursor: grab;
   user-select: none;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   position: relative;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:active {
@@ -118,11 +118,11 @@
 
 .card:hover {
   transform: translateY(-2px);
-  border-color: var(--border-hover);
-  background: var(--border-subtle);
-  box-shadow: var(--shadow-card);
+  border-color: rgba(253, 159, 18, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
+/* Fila superior: OT-0001 y Dot */
 .cardTop {
   display: flex;
   justify-content: space-between;
@@ -131,64 +131,112 @@
 }
 
 .otNumber {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
   font-weight: 700;
-  color: var(--orange);
-  letter-spacing: 0.02em;
+  color: var(--orange, #fd9f12);
+  letter-spacing: 0.03em;
 }
 
-.clientName {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 500;
+.cornerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
+/* Título de la pieza y Cliente */
 .pieceTitle {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-white);
-  margin: 0 0 8px 0;
-  line-height: 1.3;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+  line-height: 1.35;
 }
 
-.cardMeta {
+.clientName {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 14px 0;
+  font-weight: 400;
+}
+
+/* Footer de la tarjeta */
+.cardFooter {
   display: flex;
   justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metaCol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metaRow {
+  display: inline-flex;
   align-items: center;
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  gap: 7px;
+  font-size: 12px;
+  color: #94a3b8;
+  font-family: var(--font-mono, monospace);
 }
 
-.cardMeta strong {
-  color: var(--text-secondary);
+.dateText{
+   font-size: 10px;
 }
 
+.metaIcon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+/* Pill de prioridad estilo cápsula */
 .priorityPill {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  text-transform: capitalize;
+}
+
+.prioDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .priorityHigh {
-  background: var(--red-glow);
-  color: var(--prio-high-text);
-  border: 1px solid var(--red-border);
+  background: rgba(253, 159, 18, 0.1);
+  color: #fd9f12;
+  border: 1px solid rgba(253, 159, 18, 0.35);
+}
+.priorityHigh .prioDot {
+  background-color: #fd9f12;
 }
 
 .priorityMed {
-  background: var(--yellow-glow);
-  color: var(--status-pause);
-  border: 1px solid var(--yellow-border);
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.priorityMed .prioDot {
+  background-color: #38bdf8;
 }
 
 .priorityLow {
-  background: var(--border-subtle);
-  color: var(--text-muted);
-  border: 1px solid var(--border-medium);
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
 }
+.priorityLow .prioDot {
+  background-color: #94a3b8;
+}
+
