@@ -169,9 +169,11 @@ export default function Dashboard() {
             className={styles.notificationBtn}
             onClick={() => navigate("/consultas")}
             title={
-              newInquiriesCount > 0
-                ? `${newInquiriesCount} consultas nuevas`
-                : "Bandeja de Consultas"
+              newInquiriesCount === 1
+                ? "1 consulta nueva"
+                : newInquiriesCount > 1
+                  ? `${newInquiriesCount} consultas nuevas`
+                  : "Bandeja de Consultas"
             }
           >
             <Bell size={18} />
