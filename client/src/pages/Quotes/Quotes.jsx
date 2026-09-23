@@ -37,6 +37,15 @@ const formatSolicitud = (s) => ({
   cliente_nombre: s.cliente_nombre || s.client_name,
 });
 
+const formatClient = (c) => ({
+  ...c,
+  id: c.id_cliente || c.id,
+  id_cliente: c.id_cliente || c.id,
+  nombre: c.razon_social || c.nombre || "",
+  razon_social: c.razon_social || c.nombre || "",
+  ruc_nit: c.ruc_nit || c.cuit || "",
+});
+
 const STATUS_CONFIG = {
   pendiente: { label: "Pendiente", className: styles.statusPendiente },
   aprobada: { label: "Aprobada", className: styles.statusAprobada },
@@ -48,6 +57,7 @@ export default function Quotes() {
 
   const [items, setItems] = useState([]);
   const [solicitudes, setSolicitudes] = useState([]);
+  const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -56,9 +66,10 @@ export default function Quotes() {
 
   const reloadData = async () => {
     try {
-      const [resCot, resSol] = await Promise.all([
+      const [resCot, resSol, resCli] = await Promise.all([
         api.getCotizaciones(),
         api.getSolicitudes(),
+        typeof api.getClientes === "function" ? api.getClientes() : Promise.resolve({ data: [] }),
       ]);
 
       if (resCot?.status === "success" && Array.isArray(resCot.data)) {
@@ -67,6 +78,10 @@ export default function Quotes() {
 
       if (resSol?.status === "success" && Array.isArray(resSol.data)) {
         setSolicitudes(resSol.data.map(formatSolicitud));
+      }
+
+      if (resCli?.status === "success" && Array.isArray(resCli.data)) {
+        setClients(resCli.data.map(formatClient));
       }
     } catch (err) {
       console.error("[Quotes] Error al recargar cotizaciones/solicitudes:", err);
@@ -79,9 +94,10 @@ export default function Quotes() {
     async function loadInitialData() {
       try {
         const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
-        const [resCot, resSol] = await Promise.all([
+        const [resCot, resSol, resCli] = await Promise.all([
           api.getCotizaciones(),
           api.getSolicitudes(),
+          typeof api.getClientes === "function" ? api.getClientes() : Promise.resolve({ data: [] }),
           minDelay,
         ]);
 
@@ -93,6 +109,10 @@ export default function Quotes() {
 
         if (resSol?.status === "success" && Array.isArray(resSol.data)) {
           setSolicitudes(resSol.data.map(formatSolicitud));
+        }
+
+        if (resCli?.status === "success" && Array.isArray(resCli.data)) {
+          setClients(resCli.data.map(formatClient));
         }
       } catch (err) {
         console.error("[Quotes] Error al cargar cotizaciones iniciales:", err);
@@ -331,12 +351,14 @@ export default function Quotes() {
         </div>
       )}
 
+      {/* Modal de Cotización con soporte para verificación fiscal */}
       <QuoteModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         initialData={editingItem}
         availableRequests={availableRequests}
+        clients={clients}
       />
 
       <ConfirmDialog

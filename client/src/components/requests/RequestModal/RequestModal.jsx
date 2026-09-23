@@ -46,6 +46,9 @@ function RequestFormContent({ initialData, clients, onSave, onClose }) {
   const [form, setForm] = useState(() => normalizeData(initialData));
   const [saving, setSaving] = useState(false);
 
+  // 👈 Determina si realmente es una edición verificando la existencia de un ID persistido
+  const isEditing = Boolean(initialData?.id || initialData?.id_solicitud);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -83,8 +86,9 @@ function RequestFormContent({ initialData, clients, onSave, onClose }) {
       aria-modal="true"
     >
       <div className={styles.header}>
+        {/* 👈 Título corregido */}
         <h3 className={styles.title}>
-          {initialData ? "Editar solicitud" : "Nueva solicitud"}
+          {isEditing ? "Editar solicitud" : "Nueva solicitud"}
         </h3>
         <button
           type="button"
@@ -241,7 +245,6 @@ export default function RequestModal({
   initialData = null,
   clients = [],
 }) {
-  // Manejo de tecla Escape y bloqueo de scroll
   useEffect(() => {
     if (!isOpen) return;
 
@@ -260,10 +263,13 @@ export default function RequestModal({
 
   if (!isOpen) return null;
 
+  // 👈 Key única segura: si tiene ID usa su id, si es precarga o nuevo usa una combinación limpia
+  const formKey = initialData?.id || initialData?.id_solicitud || "new-request";
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <RequestFormContent
-        key={initialData ? initialData.id : "new-request"}
+        key={formKey}
         initialData={initialData}
         clients={clients}
         onSave={onSave}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom"; // 👈 1. Importar useLocation
+import { useLocation } from "react-router-dom";
 import { Plus, Pencil, Trash2, FileText, Search } from "lucide-react";
 import RequestModal from "../../components/requests/RequestModal/RequestModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog/ConfirmDialog";
@@ -7,6 +7,8 @@ import EmptyState from "../../components/common/EmptyState/EmptyState";
 import Spinner from "../../components/common/Spinner/Spinner";
 import { api } from "../../api/apiClient";
 import styles from "./Requests.module.css";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 function formatDate(dateString) {
   if (!dateString) return "—";
@@ -49,7 +51,7 @@ const PRIORITY_CONFIG = {
 };
 
 export default function Requests() {
-  const location = useLocation(); // 👈 2. Hook para capturar el state de navegación
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,7 @@ export default function Requests() {
   const [editingItem, setEditingItem] = useState(null);
   const [search, setSearch] = useState("");
   const [toDelete, setToDelete] = useState(null);
+  const [pendingInquiryId, setPendingInquiryId] = useState(null);
 
   // Recarga tras acciones del usuario (crear, editar, eliminar)
   const reloadSolicitudes = async () => {
@@ -74,11 +77,14 @@ export default function Requests() {
     try {
       const res = await api.getClientes();
       if (res?.status === "success" && Array.isArray(res.data)) {
-        setClients(res.data.map(formatClient));
+        const formatted = res.data.map(formatClient);
+        setClients(formatted);
+        return formatted;
       }
     } catch (err) {
       console.error("[Requests] Error al recargar lista de clientes:", err);
     }
+    return [];
   };
 
   // Carga inicial sincronizada
@@ -119,63 +125,108 @@ export default function Requests() {
     };
   }, []);
 
-  // 👈 3. Detectar si venimos desde "Convertir a Solicitud" en Inquiries
+  // Detectar navegación desde "Convertir a Solicitud" en Inquiries
   useEffect(() => {
-    if (!loading && location.state?.openModal && location.state?.prefillData) {
-      const prefill = location.state.prefillData;
+    let isMounted = true;
 
-      // Intentamos vincular por nombre de cliente existente
-      const matchedClient = clients.find(
-        (c) =>
-          c.nombre.toLowerCase().includes(prefill.cliente_nombre.toLowerCase()) ||
-          prefill.cliente_nombre.toLowerCase().includes(c.nombre.toLowerCase())
-      );
+    async function handlePrefillFromInquiry() {
+      if (!loading && location.state?.openModal && location.state?.prefillData) {
+        const prefill = location.state.prefillData;
 
-      // Precargamos los datos para RequestModal
-      setEditingItem({
-        id_cliente: matchedClient ? matchedClient.id : "",
-        cliente_nombre: prefill.cliente_nombre || "",
-        pieza: prefill.pieza || "",
-        descripcion: prefill.descripcion || "",
-        cantidad: 1,
-        prioridad: "Media",
-        fecha: new Date().toISOString().split("T")[0],
-      });
+        // Guardamos el ID de la consulta para marcarla como convertida únicamente tras guardar
+        if (prefill.inquiry_id) {
+          setPendingInquiryId(prefill.inquiry_id);
+        }
 
-      setIsModalOpen(true);
+        // 1. Forzar recarga de clientes para garantizar que el nuevo figure en el desplegable
+        let currentClients = clients;
+        try {
+          const resCli = await api.getClientes();
+          if (resCli?.status === "success" && Array.isArray(resCli.data)) {
+            currentClients = resCli.data.map(formatClient);
+            if (isMounted) setClients(currentClients);
+          }
+        } catch (e) {
+          console.error("[Requests] Error actualizando clientes para prefill:", e);
+        }
 
-      // Limpiamos el history state para evitar que se abra al refrescar
-      window.history.replaceState({}, document.title);
+        // 2. Resolver id_cliente (por ID enviado o por coincidencia de nombre)
+        let resolvedClientId = prefill.id_cliente ? String(prefill.id_cliente) : "";
+        if (!resolvedClientId && prefill.cliente_nombre) {
+          const match = currentClients.find(
+            (c) =>
+              c.nombre.toLowerCase().includes(prefill.cliente_nombre.toLowerCase()) ||
+              prefill.cliente_nombre.toLowerCase().includes(c.nombre.toLowerCase())
+          );
+          if (match) resolvedClientId = String(match.id);
+        }
+
+        // 3. Inicializar el modal como CREACIÓN (sin id de solicitud)
+        if (isMounted) {
+          setEditingItem({
+            id_cliente: resolvedClientId,
+            pieza: prefill.pieza || "",
+            cantidad: prefill.cantidad || 1,
+            material: prefill.material || "",
+            prioridad: prefill.prioridad || "Media",
+            descripcion: prefill.descripcion || "",
+            especificaciones: prefill.especificaciones || "",
+            fecha: new Date().toISOString().split("T")[0],
+          });
+
+          setIsModalOpen(true);
+        }
+
+        // 4. Limpiar el state del router
+        window.history.replaceState({}, document.title);
+      }
     }
-  }, [loading, location.state, clients]);
+
+    handlePrefillFromInquiry();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loading, location.state]);
 
   const handleOpenNew = () => {
     reloadClients();
     setEditingItem(null);
+    setPendingInquiryId(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item) => {
     reloadClients();
     setEditingItem(item);
+    setPendingInquiryId(null);
     setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingItem(null);
+    setPendingInquiryId(null);
   };
 
   const handleSave = async (formData) => {
     try {
-      // Si el item tiene un id_solicitud o id existente, actualiza; si vino de precarga no tiene id y crea una nueva
+      // Si tiene id de solicitud persistido, es edición
       if (editingItem && (editingItem.id_solicitud || editingItem.id)) {
         if (typeof api.actualizarSolicitud === "function") {
-          await api.actualizarSolicitud(editingItem.id, formData);
+          await api.actualizarSolicitud(editingItem.id || editingItem.id_solicitud, formData);
           await reloadSolicitudes();
         } else {
           setItems((prev) =>
             prev.map((it) =>
-              it.id === editingItem.id ? { ...it, ...formData, id: editingItem.id } : it
+              it.id === (editingItem.id || editingItem.id_solicitud)
+                ? { ...it, ...formData, id: editingItem.id || editingItem.id_solicitud }
+                : it
             )
           );
         }
       } else {
+        // Creación de nueva solicitud
         const clienteObj = clients.find(
           (c) => String(c.id) === String(formData.id_cliente)
         );
@@ -195,6 +246,19 @@ export default function Requests() {
 
         const res = await api.crearSolicitud(payload);
         if (res?.status === "success") {
+          // Si venía desde una consulta web, la marcamos convertida en MySQL
+          if (pendingInquiryId) {
+            try {
+              await fetch(`${API_BASE}/inquiries/${pendingInquiryId}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "converted" }),
+              });
+            } catch (statusErr) {
+              console.warn("[Requests] No se pudo actualizar estado de la consulta a convertida:", statusErr);
+            }
+            setPendingInquiryId(null);
+          }
           await reloadSolicitudes();
         }
       }
@@ -355,10 +419,7 @@ export default function Requests() {
       {/* Modal Crear / Editar */}
       <RequestModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingItem(null);
-        }}
+        onClose={handleCloseModal}
         onSave={handleSave}
         initialData={editingItem}
         clients={clients}

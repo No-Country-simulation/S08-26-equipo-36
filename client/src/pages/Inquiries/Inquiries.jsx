@@ -1,4 +1,4 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Inbox,
@@ -116,28 +116,109 @@ export default function Inquiries() {
     }
   };
 
-const handleConvertToRequest = async (inquiry) => {
+ const handleConvertToRequest = async (inquiry) => {
     try {
-      // 1. Marcar como convertida en MySQL
-      await handleUpdateStatus(inquiry.id, "converted");
+      const clientName = (inquiry.company || inquiry.fullName || "").trim();
+      let clientId = null;
 
-      // 2. Redirigir a Solicitudes transfiriendo los datos del lead en el state
+      // 1. Buscar si el cliente ya existe
+      const resClientes = await fetch(`${API_BASE}/clientes`);
+      const dataClientes = await resClientes.json();
+
+      if (
+        dataClientes?.status === "success" &&
+        Array.isArray(dataClientes.data)
+      ) {
+        const found = dataClientes.data.find(
+          (c) =>
+            (c.razon_social || "").trim().toLowerCase() ===
+              clientName.toLowerCase() ||
+            (c.nombre || "").trim().toLowerCase() === clientName.toLowerCase()
+        );
+        if (found) {
+          clientId = found.id_cliente || found.id;
+        }
+      }
+
+      // 2. Si no existe, crearlo
+      if (!clientId) {
+        const resCreate = await fetch(`${API_BASE}/clientes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            razon_social: clientName || "Cliente Web",
+            contacto: inquiry.fullName || "",
+            email: inquiry.email || "",
+            telefono: inquiry.phone || "",
+            ruc_nit: "",
+            direccion: "",
+            notas: `Generado automáticamente desde Consulta Web #${inquiry.id}`,
+          }),
+        });
+
+        const dataCreate = await resCreate.json();
+        if (dataCreate?.status === "success" && dataCreate.data) {
+          clientId = dataCreate.data.id_cliente || dataCreate.data.id;
+        }
+      }
+
+      // Texto unificado para análisis de cantidad y material
+      const textToAnalyze = `${inquiry.piece || ""} ${inquiry.description || inquiry.message || ""}`;
+
+      // 3. Extraer cantidad si está en el texto
+      let detectedQty = inquiry.quantity || 1;
+      if (!inquiry.quantity) {
+        const match = textToAnalyze.match(
+          /(\d+)\s*(unidades|piezas|unid|un\b)/i
+        );
+        if (match) {
+          detectedQty = parseInt(match[1], 10);
+        }
+      }
+
+      // 4. Detección inteligente de material
+      let detectedMaterial = inquiry.material || "";
+      if (!detectedMaterial) {
+        const materialPatterns = [
+          /\b(acero(?:\s+inoxidable)?(?:\s+sae)?(?:\s+\d{3,4}[a-z]?)?)\b/i,
+          /\b(sae\s*\d{3,4}[a-z]?)\b/i,
+          /\b(aluminio(?:\s+\d{3,4})?)\b/i,
+          /\b(bronce(?:\s+[a-z]+)?)\b/i,
+          /\b(fundici[oó]n(?:\s+nodular|\s+gris)?)\b/i,
+          /\b(gril[oó]n|delrin|nylon|tefl[oó]n|aplon)\b/i,
+        ];
+
+        for (const regex of materialPatterns) {
+          const match = textToAnalyze.match(regex);
+          if (match) {
+            const found = match[0].trim();
+            detectedMaterial = found.charAt(0).toUpperCase() + found.slice(1);
+            break;
+          }
+        }
+      }
+
+      // 5. Navegar a /solicitudes SIN marcar como 'converted' todavía
       navigate("/solicitudes", {
         state: {
           openModal: true,
           prefillData: {
-            inquiryId: inquiry.id,
-            cliente_nombre: inquiry.company || inquiry.fullName,
-            contacto: inquiry.fullName,
-            email: inquiry.email,
-            telefono: inquiry.phone,
-            pieza: inquiry.piece,
-            descripcion: inquiry.description,
+            inquiry_id: inquiry.id,
+            id_cliente: clientId ? String(clientId) : "",
+            pieza: inquiry.piece || "",
+            cantidad: detectedQty,
+            material: detectedMaterial, // 👈 Pasa el material detectado
+            descripcion: inquiry.description || inquiry.message || "",
+            prioridad: "Media",
           },
         },
       });
     } catch (err) {
-      console.error("Error al convertir consulta a solicitud:", err);
+      console.error(
+        "[Inquiries] Error al transferir consulta a solicitud:",
+        err
+      );
+      alert("Ocurrió un error al preparar la solicitud.");
     }
   };
 
