@@ -112,9 +112,9 @@
 }
 
 .iconAmber {
-  background-color: var(--yellow-glow);
+  background-color: var(--amber-glow);
   color: var(--status-pause);
-  border: 1px solid var(--yellow-border);
+  border: 1px solid var(--amber-border);
 }
 
 .iconGreen {

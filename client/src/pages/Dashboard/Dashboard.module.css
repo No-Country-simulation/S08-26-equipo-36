@@ -44,6 +44,57 @@
   margin: 0;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notificationBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background-color: var(--bg-card, #0e1424);
+  border: 1px solid var(--border-action, rgba(255, 255, 255, 0.1));
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.notificationBtn:hover {
+  color: var(--text-white, #ffffff);
+  border-color: var(--border-focus, rgba(255, 255, 255, 0.25));
+  background-color: var(--border-subtle, rgba(255, 255, 255, 0.04));
+}
+
+/* Badge flotante con el número de consultas */
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background-color: var(--orange, #fd9f12);
+  color: #0b0f19;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 10.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #060913; /* Recorte con el fondo general */
+  line-height: 1;
+  box-sizing: border-box;
+}
+
 .btnPrimary {
   display: inline-flex;
   align-items: center;
@@ -144,31 +195,31 @@
 .iconSlate {
   background-color: var(--border-subtle);
   border: 1px solid var(--border-medium);
-  color: var(--slate);
+  color: var(--text-muted);
 }
 
 .iconOrange {
   background-color: var(--orange-glow);
   border: 1px solid var(--orange-border);
-  color: var(--orange);
+  color: var(--text-muted);
 }
 
 .iconAmber {
-  background-color: var(--yellow-glow);
-  border: 1px solid var(--yellow-border);
-  color: var(--status-pause);
+  background-color: var(--amber-glow);
+  border: 1px solid var(--amber-border);
+  color: var(--text-muted);;
 }
 
 .iconGreen {
   background-color: var(--green-glow);
   border: 1px solid var(--green-border);
-  color: var(--status-done);
+  color: var(--text-muted);
 }
 
 /* Glows */
 .glowSlate { background-color: var(--slate); }
 .glowOrange { background-color: var(--orange); }
-.glowAmber { background-color: var(--yellow); }
+.glowAmber { background-color: var(--amber); }
 .glowGreen { background-color: var(--green); }
 
 /* Tablero Kanban */
@@ -249,7 +300,7 @@
 /* Colores de columna e indicadores */
 .colCreada { background-color: var(--slate); }
 .colMecanizado { background-color: var(--orange); }
-.colCalidad { background-color: var(--yellow); }
+.colCalidad { background-color: var(--amber); }
 .colLiberada { background-color: var(--green); }
 
 .cardList {
