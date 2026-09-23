@@ -535,7 +535,11 @@ def actualizar_estado_ot(id_ot):
         return jsonify({"status": "error", "message": "No hay conexión a la base de datos"}), 500
     try:
         datos = request.get_json() or {}
-        nuevo_estado = datos.get('estado')
+        nuevo_estado = (datos.get('estado') or '').lower()
+
+        # Mapear 'liberada' a un valor compatible si el ENUM de la BD no lo tiene
+        if nuevo_estado == 'liberada':
+            nuevo_estado = 'finalizada' 
 
         cursor = conexion.cursor()
         if nuevo_estado in ['en_proceso', 'mecanizado']:
@@ -630,13 +634,24 @@ def crear_control_calidad(id_ot):
         inspector = datos.get('inspector', 'Inspector de Calidad')
         fecha = datos.get('fecha') or None
 
-        cursor = conexion.cursor()
+        cursor = conexion.cursor(dictionary=True)
         sql = """
             INSERT INTO controlcalidad 
             (orden_trabajo_id, operacion_id, tipo, resultado, medicion, tolerancia, observaciones, inspector, fecha)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, CURDATE()))
         """
         cursor.execute(sql, (id_ot, operacion_id, tipo, resultado, medicion, tolerancia, observaciones, inspector, fecha))
+        
+        # Si el control resulta aprobado, verificamos no-conformidades críticas
+        if resultado == 'aprobado':
+            cursor.execute("SELECT COUNT(*) as criticas FROM noconformidades WHERE id_ot = %s AND severidad = 'critica' AND estado != 'resuelta'", (id_ot,))
+            nc_row = cursor.fetchone()
+            criticas = nc_row['criticas'] if isinstance(nc_row, dict) else nc_row[0]
+
+            if criticas == 0:
+                # Actualizar estado de la OT a finalizada/liberada de forma automática
+                cursor.execute("UPDATE ordenes_trabajo SET estado_actual = 'finalizada' WHERE id_ot = %s", (id_ot,))
+
         conexion.commit()
         nuevo_id = cursor.lastrowid
         return jsonify({"status": "success", "id_control": nuevo_id}), 201
@@ -784,8 +799,6 @@ def actualizar_estado_operacion(id_operacion):
     finally:
         if 'cursor' in locals(): cursor.close()
         if conexion.is_connected(): conexion.close()
-
-# --- NO CONFORMIDADES / FALLAS ---
 
 # --- NO CONFORMIDADES / FALLAS ---
 @app.route('/api/ordenes/<int:id_ot>/noconformidades', methods=['GET'])
@@ -1092,70 +1105,6 @@ def obtener_entregas_ot(id_ot):
         if 'cursor' in locals(): cursor.close()
         if conexion.is_connected(): conexion.close()
 
-@app.route('/api/ordenes/<int:id_ot>/entregas', methods=['POST'])
-def crear_entrega_ot(id_ot):
-    conexion = get_db_connection()
-    if not conexion:
-        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
-    try:
-        cursor = conexion.cursor(dictionary=True)
-        
-        datos = request.get_json() or {}
-        fecha = datos.get('fecha') or datetime.date.today().strftime('%Y-%m-%d')
-        cantidad = datos.get('cantidad') or 0
-        remito = datos.get('remito') or 'Pendiente de generar'
-        estado = (datos.get('estado') or 'programada').lower()
-        recibido_por = datos.get('recibido_por') or ''
-        observaciones = datos.get('observaciones') or None
-
-        # La entrega se vincula DIRECTAMENTE y EXCLUSIVAMENTE a la OT
-        cursor.execute("""
-            INSERT INTO entregas 
-            (orden_trabajo_id, fecha, cantidad_entregada, remito, estado, recibido_por, observaciones) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (id_ot, fecha, cantidad, remito, estado, recibido_por, observaciones))
-        
-        conexion.commit()
-        return jsonify({"status": "success", "id_entrega": cursor.lastrowid}), 201
-    except Exception as e:
-        conexion.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        if 'cursor' in locals(): cursor.close()
-        if conexion.is_connected(): conexion.close()
-
-@app.route('/api/entregas/<int:id_entrega>', methods=['PUT'])
-def actualizar_entrega(id_entrega):
-    conexion = get_db_connection()
-    if not conexion:
-        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
-    try:
-        datos = request.get_json() or {}
-        cursor = conexion.cursor()
-        cursor.execute("""
-            UPDATE entregas 
-            SET fecha = %s, cantidad_entregada = %s, remito = %s, estado = %s, 
-                cliente_nombre = %s, recibido_por = %s, observaciones = %s 
-            WHERE id_entrega = %s
-        """, (
-            datos.get('fecha'),
-            datos.get('cantidad'),
-            datos.get('remito'),
-            (datos.get('estado') or 'programada').lower(),
-            datos.get('cliente_nombre'),
-            datos.get('recibido_por'),
-            datos.get('observaciones'),
-            id_entrega
-        ))
-        conexion.commit()
-        return jsonify({"status": "success", "message": "Entrega actualizada"}), 200
-    except Exception as e:
-        conexion.rollback()
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        if 'cursor' in locals(): cursor.close()
-        if conexion.is_connected(): conexion.close()
-
 @app.route('/api/entregas/<int:id_entrega>', methods=['DELETE'])
 def eliminar_entrega(id_entrega):
     conexion = get_db_connection()
@@ -1280,5 +1229,111 @@ def actualizar_estado_inquiry(id_inquiry):
         if 'cursor' in locals(): cursor.close()
         if conexion.is_connected(): conexion.close()
 
+def evaluar_y_actualizar_estado_ot_por_entrega(cursor, orden_trabajo_id, fecha_remito):
+    """Calcula el total entregado y actualiza la OT si se completa."""
+    # Obtener cantidad total requerida de la OT
+    cursor.execute("SELECT cantidad FROM ordenes_trabajo WHERE id_ot = %s", (orden_trabajo_id,))
+    ot_row = cursor.fetchone()
+    if not ot_row:
+        return
+
+    cantidad_total_ot = ot_row['cantidad'] if isinstance(ot_row, dict) else ot_row[0]
+
+    # Calcular sumatoria acumulada de cantidades entregadas
+    cursor.execute("SELECT SUM(cantidad_entregada) as total_entregado FROM entregas WHERE orden_trabajo_id = %s", (orden_trabajo_id,))
+    sum_row = cursor.fetchone()
+    total_entregado = (sum_row['total_entregado'] if isinstance(sum_row, dict) else sum_row[0]) or 0
+
+    # Si lo entregado cubre o supera el total de la OT, actualizar estado y fecha real
+    if total_entregado >= cantidad_total_ot:
+        cursor.execute("""
+            UPDATE ordenes_trabajo 
+            SET estado_actual = 'entregada', 
+                fecha_entrega_real = COALESCE(%s, CURDATE()) 
+            WHERE id_ot = %s
+        """, (fecha_remito, orden_trabajo_id))
+
+
+@app.route('/api/ordenes/<int:id_ot>/entregas', methods=['POST'])
+def crear_entrega_ot(id_ot):
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        
+        datos = request.get_json() or {}
+        fecha = datos.get('fecha') or datetime.date.today().strftime('%Y-%m-%d')
+        cantidad = datos.get('cantidad') or 0
+        remito = datos.get('remito') or 'Pendiente de generar'
+        estado = (datos.get('estado') or 'programada').lower()
+        recibido_por = datos.get('recibido_por') or ''
+        observaciones = datos.get('observaciones') or None
+
+        cursor.execute("""
+            INSERT INTO entregas 
+            (orden_trabajo_id, fecha, cantidad_entregada, remito, estado, recibido_por, observaciones) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (id_ot, fecha, cantidad, remito, estado, recibido_por, observaciones))
+        
+        # Evaluar si la entrega completa la OT
+        evaluar_y_actualizar_estado_ot_por_entrega(cursor, id_ot, fecha)
+
+        conexion.commit()
+        return jsonify({"status": "success", "id_entrega": cursor.lastrowid}), 201
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+
+
+@app.route('/api/entregas/<int:id_entrega>', methods=['PUT'])
+def actualizar_entrega(id_entrega):
+    conexion = get_db_connection()
+    if not conexion:
+        return jsonify({"status": "error", "message": "Sin conexión a la base de datos"}), 500
+    try:
+        cursor = conexion.cursor(dictionary=True)
+        datos = request.get_json() or {}
+        
+        # Obtener la OT asociada a esta entrega
+        cursor.execute("SELECT orden_trabajo_id FROM entregas WHERE id_entrega = %s", (id_entrega,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"status": "error", "message": "Entrega no encontrada"}), 404
+        
+        id_ot = row['orden_trabajo_id']
+        nueva_fecha = datos.get('fecha')
+
+        cursor.execute("""
+            UPDATE entregas 
+            SET fecha = %s, cantidad_entregada = %s, remito = %s, estado = %s, 
+                cliente_nombre = %s, recibido_por = %s, observaciones = %s 
+            WHERE id_entrega = %s
+        """, (
+            nueva_fecha,
+            datos.get('cantidad'),
+            datos.get('remito'),
+            (datos.get('estado') or 'programada').lower(),
+            datos.get('cliente_nombre'),
+            datos.get('recibido_por'),
+            datos.get('observaciones'),
+            id_entrega
+        ))
+
+        # Re-evaluar el estado acumulado de la OT
+        evaluar_y_actualizar_estado_ot_por_entrega(cursor, id_ot, nueva_fecha)
+
+        conexion.commit()
+        return jsonify({"status": "success", "message": "Entrega actualizada"}), 200
+    except Exception as e:
+        conexion.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if 'cursor' in locals(): cursor.close()
+        if conexion.is_connected(): conexion.close()
+        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
