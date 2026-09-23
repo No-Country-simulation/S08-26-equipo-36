@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ClipboardList, Wrench, ShieldCheck, CheckCircle2 } from "lucide-react";
+import {
+  Plus,
+  ClipboardList,
+  Wrench,
+  ShieldCheck,
+  CheckCircle2,
+  Bell,
+} from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import NewOrderModal from "../../components/dashboard/NewOrderModal/NewOrderModal";
-import KanbanBoard from "../../components/dashboard/kanban/KanbanBoard"; // 👈 Tu componente modular
+import KanbanBoard from "../../components/dashboard/kanban/KanbanBoard";
 import { api } from "../../api/apiClient";
 import styles from "./Dashboard.module.css";
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -14,13 +24,16 @@ export default function Dashboard() {
   const [ots, setOts] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newInquiriesCount, setNewInquiriesCount] = useState(0);
 
-  // Cargar órdenes y clientes desde MySQL
+  // Cargar órdenes, clientes y consultas nuevas
   const loadDashboardData = useCallback(async () => {
     try {
       const [resOts, resClientes] = await Promise.all([
         api.getOrdenes(),
-        typeof api.getClientes === "function" ? api.getClientes() : Promise.resolve({ data: [] })
+        typeof api.getClientes === "function"
+          ? api.getClientes()
+          : Promise.resolve({ data: [] }),
       ]);
 
       if (resOts?.status === "success" && Array.isArray(resOts.data)) {
@@ -29,21 +42,43 @@ export default function Dashboard() {
           id: o.id_ot || o.id,
           cliente: o.cliente_nombre || "Cliente General",
           estado: o.estado_actual || o.estado || "creada",
-          prioridad: (o.prioridad || "Media").charAt(0).toUpperCase() + (o.prioridad || "Media").slice(1).toLowerCase()
+          prioridad:
+            (o.prioridad || "Media").charAt(0).toUpperCase() +
+            (o.prioridad || "Media").slice(1).toLowerCase(),
         }));
         setOts(ordenesFormateadas);
       }
 
-      if (resClientes?.status === "success" && Array.isArray(resClientes.data)) {
+      if (
+        resClientes?.status === "success" &&
+        Array.isArray(resClientes.data)
+      ) {
         setClientes(
           resClientes.data.map((c) => ({
             id: c.id_cliente || c.id,
-            nombre: c.razon_social || c.nombre
-          }))
+            nombre: c.razon_social || c.nombre,
+          })),
+        );
+      }
+
+      // Consultar leads con status 'new' para la campanita
+      try {
+        const resInq = await fetch(`${API_BASE}/inquiries?status=new`);
+        const dataInq = await resInq.json();
+        if (dataInq?.status === "success" && Array.isArray(dataInq.data)) {
+          setNewInquiriesCount(dataInq.data.length);
+        }
+      } catch (err) {
+        console.warn(
+          "[Dashboard] No se pudieron cargar las consultas para la notificación:",
+          err,
         );
       }
     } catch (err) {
-      console.error("[Dashboard] Error al cargar datos del centro de operaciones:", err);
+      console.error(
+        "[Dashboard] Error al cargar datos del centro de operaciones:",
+        err,
+      );
     } finally {
       setLoading(false);
     }
@@ -60,25 +95,28 @@ export default function Dashboard() {
     };
   }, [loadDashboardData]);
 
-  // Manejo de cambio de estado (Drag & Drop) hacia la API
-const handleMove = async (ot, targetStatus) => {
-  // 1. Actualización optimista en React
-  setOts((prev) =>
-    prev.map((o) => (String(o.id) === String(ot.id) ? { ...o, estado: targetStatus } : o))
-  );
+  const handleMove = async (ot, targetStatus) => {
+    setOts((prev) =>
+      prev.map((o) =>
+        String(o.id) === String(ot.id) ? { ...o, estado: targetStatus } : o,
+      ),
+    );
 
-  // 2. Mapeo para MySQL: la columna 'liberada' corresponde a 'finalizada' en la BD
-  const backendStatus = targetStatus === "liberada" ? "finalizada" : targetStatus;
+    const backendStatus =
+      targetStatus === "liberada" ? "finalizada" : targetStatus;
 
-  try {
-    if (typeof api.actualizarEstadoOrden === "function") {
-      await api.actualizarEstadoOrden(ot.id, backendStatus);
+    try {
+      if (typeof api.actualizarEstadoOrden === "function") {
+        await api.actualizarEstadoOrden(ot.id, backendStatus);
+      }
+    } catch (err) {
+      console.error(
+        "[Dashboard] Error actualizando estado de orden vía drag & drop:",
+        err,
+      );
+      loadDashboardData();
     }
-  } catch (err) {
-    console.error("[Dashboard] Error actualizando estado de orden vía drag & drop:", err);
-    loadDashboardData();
-  }
-};
+  };
 
   const handleCardClick = (ot) => {
     navigate(`/ordenes/${ot.id}`);
@@ -93,21 +131,57 @@ const handleMove = async (ot, targetStatus) => {
     return <Spinner fullScreen text="Cargando centro de operaciones..." />;
   }
 
-  // Contadores normalizados
-  const enMecanizado = ots.filter((o) => o.estado === "en_proceso" || o.estado === "mecanizado").length;
-  const controlCalidad = ots.filter((o) => o.estado === "control_calidad" || o.estado === "calidad").length;
- const liberadas = ots.filter((o) => o.estado === "liberada" || o.estado === "finalizada" || o.estado === "entregada").length;
+  const enMecanizado = ots.filter(
+    (o) => o.estado === "en_proceso" || o.estado === "mecanizado",
+  ).length;
+  const controlCalidad = ots.filter(
+    (o) => o.estado === "control_calidad" || o.estado === "calidad",
+  ).length;
+  const liberadas = ots.filter(
+    (o) =>
+      o.estado === "liberada" ||
+      o.estado === "finalizada" ||
+      o.estado === "entregada",
+  ).length;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.title}>Centro de Operaciones</h1>
-          <p className={styles.subtitle}>Flujo de órdenes en tiempo real (arrastrá las tarjetas para cambiar de estado).</p>
+          <p className={styles.subtitle}>
+            Flujo de órdenes en tiempo real (arrastrá las tarjetas para cambiar
+            de estado).
+          </p>
         </div>
-        <button type="button" onClick={() => setIsModalOpen(true)} className={styles.btnPrimary}>
-          <Plus size={16} strokeWidth={2.5} /> Nueva Orden de Trabajo
-        </button>
+
+        {/* Grupo de acciones: Campanita de notificaciones + Botón Crear OT */}
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className={styles.btnPrimary}
+          >
+            <Plus size={16} strokeWidth={2.5} /> Nueva Orden de Trabajo
+          </button>
+          <button
+            type="button"
+            className={styles.notificationBtn}
+            onClick={() => navigate("/consultas")}
+            title={
+              newInquiriesCount > 0
+                ? `${newInquiriesCount} consultas nuevas`
+                : "Bandeja de Consultas"
+            }
+          >
+            <Bell size={18} />
+            {newInquiriesCount > 0 && (
+              <span className={styles.notificationBadge}>
+                {newInquiriesCount > 99 ? "99+" : newInquiriesCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Métricas Superiores */}
@@ -166,7 +240,11 @@ const handleMove = async (ot, targetStatus) => {
       </div>
 
       {/* Tablero Kanban modular */}
-      <KanbanBoard ots={ots} onMove={handleMove} onCardClick={handleCardClick} />
+      <KanbanBoard
+        ots={ots}
+        onMove={handleMove}
+        onCardClick={handleCardClick}
+      />
 
       <NewOrderModal
         isOpen={isModalOpen}

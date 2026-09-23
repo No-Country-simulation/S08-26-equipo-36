@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom"; // 👈 1. Importar useLocation
 import { Plus, Pencil, Trash2, FileText, Search } from "lucide-react";
 import RequestModal from "../../components/requests/RequestModal/RequestModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog/ConfirmDialog";
@@ -48,6 +49,7 @@ const PRIORITY_CONFIG = {
 };
 
 export default function Requests() {
+  const location = useLocation(); // 👈 2. Hook para capturar el state de navegación
   const [items, setItems] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function Requests() {
     }
   };
 
-  // Carga inicial sincronizada para evitar cascada de renders
+  // Carga inicial sincronizada
   useEffect(() => {
     let isMounted = true;
 
@@ -117,6 +119,36 @@ export default function Requests() {
     };
   }, []);
 
+  // 👈 3. Detectar si venimos desde "Convertir a Solicitud" en Inquiries
+  useEffect(() => {
+    if (!loading && location.state?.openModal && location.state?.prefillData) {
+      const prefill = location.state.prefillData;
+
+      // Intentamos vincular por nombre de cliente existente
+      const matchedClient = clients.find(
+        (c) =>
+          c.nombre.toLowerCase().includes(prefill.cliente_nombre.toLowerCase()) ||
+          prefill.cliente_nombre.toLowerCase().includes(c.nombre.toLowerCase())
+      );
+
+      // Precargamos los datos para RequestModal
+      setEditingItem({
+        id_cliente: matchedClient ? matchedClient.id : "",
+        cliente_nombre: prefill.cliente_nombre || "",
+        pieza: prefill.pieza || "",
+        descripcion: prefill.descripcion || "",
+        cantidad: 1,
+        prioridad: "Media",
+        fecha: new Date().toISOString().split("T")[0],
+      });
+
+      setIsModalOpen(true);
+
+      // Limpiamos el history state para evitar que se abra al refrescar
+      window.history.replaceState({}, document.title);
+    }
+  }, [loading, location.state, clients]);
+
   const handleOpenNew = () => {
     reloadClients();
     setEditingItem(null);
@@ -131,7 +163,8 @@ export default function Requests() {
 
   const handleSave = async (formData) => {
     try {
-      if (editingItem) {
+      // Si el item tiene un id_solicitud o id existente, actualiza; si vino de precarga no tiene id y crea una nueva
+      if (editingItem && (editingItem.id_solicitud || editingItem.id)) {
         if (typeof api.actualizarSolicitud === "function") {
           await api.actualizarSolicitud(editingItem.id, formData);
           await reloadSolicitudes();
@@ -166,6 +199,7 @@ export default function Requests() {
         }
       }
       setIsModalOpen(false);
+      setEditingItem(null);
     } catch (err) {
       console.error("[Requests] Error al guardar solicitud:", err);
     }
@@ -321,7 +355,10 @@ export default function Requests() {
       {/* Modal Crear / Editar */}
       <RequestModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingItem(null);
+        }}
         onSave={handleSave}
         initialData={editingItem}
         clients={clients}

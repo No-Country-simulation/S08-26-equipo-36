@@ -1,16 +1,20 @@
 import { useState } from "react";
-import { Send, CheckCircle2 } from "lucide-react";
+import { Send, CheckCircle2, RefreshCw } from "lucide-react";
 import styles from "./ContactForm.module.css";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+const INITIAL_FORM_STATE = {
+  fullName: "",
+  company: "",
+  email: "",
+  phone: "",
+  piece: "",
+  message: "",
+};
+
 export default function ContactForm() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    company: "",
-    email: "",
-    phone: "",
-    piece: "",
-    message: "",
-  });
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -23,24 +27,34 @@ export default function ContactForm() {
     e.preventDefault();
     setLoading(true);
 
+    // Payload con los campos exactos validados por app.py
+    const payload = {
+      fullName: formData.fullName.trim(),
+      company: formData.company.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      piece: formData.piece.trim(),
+      message: formData.message.trim(),
+    };
+
     try {
-      // Apuntamos directamente a la URL completa del backend de Flask
-      const response = await fetch("http://localhost:5000/api/inquiries", {
+      const response = await fetch(`${API_BASE}/inquiries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Error al enviar la consulta");
+        throw new Error(data.message || "Error al procesar la consulta en el servidor");
       }
 
       setSubmitted(true);
+      setFormData(INITIAL_FORM_STATE);
     } catch (error) {
       console.error("Error al enviar consulta:", error);
-      alert("Hubo un error al enviar la consulta. Revisa la consola.");
+      alert(error.message || "Hubo un error al conectar con el servidor. Revisa la consola.");
     } finally {
       setLoading(false);
     }
@@ -64,10 +78,33 @@ export default function ContactForm() {
 
           {submitted ? (
             <div className={styles.successMessage}>
-              <CheckCircle2 size={32} className={styles.successIcon} />
+              <CheckCircle2 size={36} className={styles.successIcon} />
               <div>
                 <h3>¡Consulta recibida con éxito!</h3>
-                <p>Nuestro equipo de ingeniería revisará el requerimiento y se comunicará pronto.</p>
+                <p>
+                  Nuestro equipo de ingeniería revisará el requerimiento técnico y
+                  se comunicará a la brevedad.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSubmitted(false)}
+                  className={styles.btnReset}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    marginTop: "1rem",
+                    background: "transparent",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: "6px",
+                    padding: "6px 14px",
+                    color: "var(--text-white, #ffffff)",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  <RefreshCw size={14} /> Enviar otra consulta
+                </button>
               </div>
             </div>
           ) : (
@@ -75,7 +112,9 @@ export default function ContactForm() {
               {/* Fila 1: Contacto Principal */}
               <div className={styles.inputRow}>
                 <div className={styles.field}>
-                  <label htmlFor="fullName" className={styles.label}>Nombre y apellido *</label>
+                  <label htmlFor="fullName" className={styles.label}>
+                    Nombre y apellido *
+                  </label>
                   <input
                     type="text"
                     id="fullName"
@@ -89,7 +128,9 @@ export default function ContactForm() {
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="company" className={styles.label}>Empresa / Taller *</label>
+                  <label htmlFor="company" className={styles.label}>
+                    Empresa / Taller *
+                  </label>
                   <input
                     type="text"
                     id="company"
@@ -103,7 +144,9 @@ export default function ContactForm() {
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="email" className={styles.label}>Email de contacto *</label>
+                  <label htmlFor="email" className={styles.label}>
+                    Email de contacto *
+                  </label>
                   <input
                     type="email"
                     id="email"
@@ -120,7 +163,9 @@ export default function ContactForm() {
               {/* Fila 2: Teléfono y Pieza/Requerimiento */}
               <div className={styles.inputRow2}>
                 <div className={styles.field}>
-                  <label htmlFor="phone" className={styles.label}>Teléfono / WhatsApp</label>
+                  <label htmlFor="phone" className={styles.label}>
+                    Teléfono / WhatsApp
+                  </label>
                   <input
                     type="tel"
                     id="phone"
@@ -133,7 +178,9 @@ export default function ContactForm() {
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="piece" className={styles.label}>Pieza o trabajo a cotizar *</label>
+                  <label htmlFor="piece" className={styles.label}>
+                    Pieza o trabajo a cotizar *
+                  </label>
                   <input
                     type="text"
                     id="piece"
@@ -149,7 +196,9 @@ export default function ContactForm() {
 
               {/* Fila 3: Mensaje detallado */}
               <div className={styles.field}>
-                <label htmlFor="message" className={styles.label}>Detalles o especificaciones *</label>
+                <label htmlFor="message" className={styles.label}>
+                  Detalles o especificaciones *
+                </label>
                 <textarea
                   id="message"
                   name="message"
@@ -163,8 +212,12 @@ export default function ContactForm() {
               </div>
 
               <div className={styles.actionWrapper}>
-                <button type="submit" disabled={loading} className={styles.btnPrimary}>
-                  {loading ? "Enviando..." : "Enviar Consulta"}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={styles.btnPrimary}
+                >
+                  {loading ? "Enviando consulta..." : "Enviar Consulta"}
                   <Send size={16} className={styles.sendIcon} />
                 </button>
               </div>
