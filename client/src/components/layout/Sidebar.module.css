@@ -9,67 +9,94 @@
   position: sticky;
   top: 0;
   box-sizing: border-box;
+  z-index: 100;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
 }
 
-@media (min-width: 768px) {
-  .sidebar {
-    display: flex;
+/* Backdrop para oscurecer el fondo en tablet expandido */
+.backdrop {
+  display: none;
+}
+
+/* =========================================================
+   Botón circular flotante montado sobre el borde derecho
+   ========================================================= */
+.edgeToggleBtn {
+  display: none;
+  position: absolute;
+  top: 45px;
+  right: -9px; /* La mitad exacta de sus 18px */
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--bg-card, #111827);
+  border: 1px solid var(--border-medium, rgba(255, 255, 255, 0.18));
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  z-index: 1050;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  outline: none;
+  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, color 0.15s ease;
+}
+
+.edgeToggleBtn:hover {
+  background-color: var(--border-subtle, #1e293b);
+  border-color: var(--orange, #fd9f12);
+  color: var(--orange, #fd9f12);
+}
+
+/* En tablets quitamos el hover pegajoso del toque */
+@media (hover: none) {
+  .edgeToggleBtn:hover {
+    background-color: var(--bg-card, #111827);
+    border-color: var(--border-medium, rgba(255, 255, 255, 0.18));
+    color: var(--text-muted, #94a3b8);
   }
 }
 
-/* Header de la marca */
-.brandHeader {
+/* Header del Sidebar */
+.headerWrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 24px;
-  height: 64px;
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.06));
+  padding: 16px 20px;
+  min-height: 64px;
   box-sizing: border-box;
+  overflow: visible;
+  position: relative;
 }
 
-.brandIconBox {
-  display: flex;
-  height: 36px;
-  width: 36px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background-color: var(--orange, #fd9f12);
-  color: #000000;
-  box-shadow: 0 10px 15px -3px rgba(253, 159, 18, 0.2);
-  flex-shrink: 0;
+.logoFull {
+  height: 38px;
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
 }
 
-.brandText {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+.logoIcon {
+  display: none;
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-.brandTitle {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-  margin: 0;
-}
-
-.brandSubtitle {
-  font-size: 11px;
-  color: var(--slate, #64748b);
-  font-family: var(--font-mono, monospace);
-  margin: 0;
+.logoIcon:hover {
+  transform: scale(1.05);
 }
 
 /* Navegación */
 .nav {
   flex: 1;
-  padding: 20px 12px;
+  padding: 16px 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .navItem {
@@ -85,6 +112,7 @@
   color: var(--text-muted, #94a3b8);
   transition: all 0.15s ease;
   user-select: none;
+  white-space: nowrap;
 }
 
 .navItem:hover {
@@ -103,7 +131,6 @@
   color: var(--orange, #fd9f12);
 }
 
-/* Barra vertical indicadora a la izquierda del item activo */
 .activeIndicator {
   position: absolute;
   left: 0;
@@ -122,11 +149,19 @@
   flex-shrink: 0;
 }
 
+.navLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.2s ease;
+}
+
 .navChevron {
   height: 16px;
   width: 16px;
   margin-left: auto;
   color: var(--slate, #64748b);
+  flex-shrink: 0;
 }
 
 /* Footer del Sidebar */
@@ -136,6 +171,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden;
 }
 
 .footerText {
@@ -144,6 +180,7 @@
   line-height: 1.5;
   padding: 0 12px;
   margin: 0;
+  transition: opacity 0.2s ease;
 }
 
 .btnLogout {
@@ -161,6 +198,7 @@
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .btnLogout:hover {
@@ -168,8 +206,124 @@
   background-color: rgba(244, 63, 94, 0.1);
 }
 
-.logo{
-  height: 45px;
-  width: auto;
-  padding: 16px 20px;
+/* =========================================================
+   COMPORTAMIENTO EN TABLETS (768px a 1024px)
+   ========================================================= */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sidebar {
+    display: flex;
+    width: 68px; /* Ancho colapsado */
+    overflow: visible; /* Clave para que el botón circular asome hacia afuera */
+  }
+
+  .edgeToggleBtn {
+    display: flex; /* Se activa en tablet */
+  }
+
+  .headerWrapper {
+    justify-content: center;
+    padding: 16px 0 12px 0;
+  }
+
+  /* Mostrar solo el Isotipo limpio arriba en la franja de 68px */
+  .logoFull {
+    display: none;
+  }
+
+  .logoIcon {
+    display: block;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  .navLabel,
+  .navChevron,
+  .footerText {
+    display: none;
+  }
+
+  .btnLogout {
+    justify-content: center;
+    padding: 10px 0;
+  }
+
+  /* ESTADO EXPANDIDO (OVERLAY / FLOTANTE) */
+  .sidebarExpanded {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 256px;
+    z-index: 1000;
+    box-shadow: 10px 0 25px -5px rgba(0, 0, 0, 0.6);
+  }
+
+  .sidebarExpanded .headerWrapper {
+    justify-content: flex-start;
+    padding: 16px 20px;
+  }
+
+  .sidebarExpanded .logoFull {
+    display: block;
+    max-width: 150px;
+  }
+
+  .sidebarExpanded .logoIcon {
+    display: none;
+  }
+
+  .sidebarExpanded .navItem {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .sidebarExpanded .navLabel {
+    display: inline;
+  }
+
+  .sidebarExpanded .navChevron {
+    display: block;
+  }
+
+  .sidebarExpanded .footerText {
+    display: block;
+  }
+
+  .sidebarExpanded .btnLogout {
+    justify-content: flex-start;
+    padding: 10px 12px;
+  }
+
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 15, 26, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: 999;
+  }
+}
+
+/* =========================================================
+   DESKTOP (Mayor a 1024px)
+   ========================================================= */
+@media (min-width: 1025px) {
+  .sidebar {
+    display: flex;
+    width: 256px;
+  }
+
+  .logoFull {
+    display: block;
+  }
+
+  .logoIcon {
+    display: none;
+  }
+
+  .edgeToggleBtn {
+    display: none;
+  }
 }

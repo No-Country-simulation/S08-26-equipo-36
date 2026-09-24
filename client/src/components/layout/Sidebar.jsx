@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -6,10 +7,10 @@ import {
   FileCheck,
   ClipboardList,
   ChevronRight,
+  ChevronLeft,
   Wrench,
   LogOut,
-  MessageCircleQuestion
-
+  MessageCircleQuestion,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./Sidebar.module.css";
@@ -28,22 +29,41 @@ export default function Sidebar({ onLogout }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+  const sidebarRef = useRef(null);
   const isOTDetail = location.pathname.startsWith("/ordenes/");
+
+  // Cerrar sidebar inmediatamente si la ruta cambia sin disparar render en cascada
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
+    setIsExpanded(false);
+  }
+
+  // Cerrar al hacer clic fuera del sidebar cuando está expandido en tablet
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        isExpanded &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target)
+      ) {
+        setIsExpanded(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isExpanded]);
 
   const handleLogout = async () => {
     try {
-      // 1. Cierra la sesión activa en Supabase y limpia el storage real
       await signOut();
-
-      // 2. Limpieza legacy por compatibilidad
       localStorage.removeItem("qualitytrack_user");
-
-      // 3. Callback opcional
       if (onLogout) {
         onLogout();
       }
-
-      // 4. Redirige a login
       navigate("/login", { replace: true });
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
@@ -51,52 +71,97 @@ export default function Sidebar({ onLogout }) {
   };
 
   return (
-    <aside className={styles.sidebar}>
-      {/* Header de la marca */}
-      <img src="/Imagotipo-Sidebar.svg" alt="Logo" className={styles.logo} />
+    <>
+      {/* Backdrop para cerrar al tocar fuera en tablet */}
+      {isExpanded && (
+        <div
+          className={styles.backdrop}
+          onClick={() => setIsExpanded(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navegación */}
-      <nav className={styles.nav}>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `${styles.navItem} ${isActive ? styles.navItemActive : ""}`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && <span className={styles.activeIndicator} />}
-                  <Icon className={styles.navIcon} strokeWidth={2} />
-                  <span>{item.label}</span>
-                  {isOTDetail && item.to === "/ordenes" && (
-                    <ChevronRight className={styles.navChevron} />
-                  )}
-                </>
-              )}
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className={styles.footer}>
-        <p className={styles.footerText}>
-          Trazabilidad centralizada de cada trabajo, desde la solicitud hasta la entrega.
-        </p>
+      <aside
+        ref={sidebarRef}
+        className={`${styles.sidebar} ${isExpanded ? styles.sidebarExpanded : ""}`}
+      >
+        {/* Botón flotante circular en el borde derecho (estilo Pro Sidebar) */}
         <button
           type="button"
-          onClick={handleLogout}
-          className={styles.btnLogout}
+          className={styles.edgeToggleBtn}
+          onClick={() => setIsExpanded(!isExpanded)}
+          title={isExpanded ? "Colapsar menú" : "Expandir menú"}
+          aria-label={isExpanded ? "Colapsar menú" : "Expandir menú"}
         >
-          <LogOut className={styles.navIcon} strokeWidth={2} />
-          Cerrar sesión
+          {isExpanded ? (
+            <ChevronLeft size={10} strokeWidth={2.5} />
+          ) : (
+            <ChevronRight size={10} strokeWidth={2.5} />
+          )}
         </button>
-      </div>
-    </aside>
+
+        {/* Header con Isotipo o Logo Completo */}
+        <div className={styles.headerWrapper}>
+          <img
+            src="/Imagotipo-Sidebar.svg"
+            alt="QualityTrack"
+            className={styles.logoFull}
+          />
+          <img
+            src="/Isotipo.svg"
+            alt="QualityTrack"
+            className={styles.logoIcon}
+            onClick={() => setIsExpanded(!isExpanded)}
+          />
+        </div>
+
+        {/* Navegación */}
+        <nav className={styles.nav}>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={() => setIsExpanded(false)}
+                className={({ isActive }) =>
+                  `${styles.navItem} ${isActive ? styles.navItemActive : ""}`
+                }
+                title={item.label}
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && <span className={styles.activeIndicator} />}
+                    <Icon className={styles.navIcon} strokeWidth={2} />
+                    <span className={styles.navLabel}>{item.label}</span>
+                    {isOTDetail && item.to === "/ordenes" && (
+                      <ChevronRight className={styles.navChevron} />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className={styles.footer}>
+          <p className={styles.footerText}>
+            Trazabilidad centralizada de cada trabajo, desde la solicitud hasta
+            la entrega.
+          </p>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={styles.btnLogout}
+            title="Cerrar sesión"
+          >
+            <LogOut className={styles.navIcon} strokeWidth={2} />
+            <span className={styles.navLabel}>Cerrar sesión</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
