@@ -1,11 +1,18 @@
+import os
 import datetime
 from decimal import Decimal
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from db import get_db_connection
+from email_service import email_bp
 
+# 1. Instancia única de la aplicación
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+
+# 2. Registrar el Blueprint
+app.register_blueprint(email_bp)
+
 # --- STATUS ---
 @app.route('/api/status', methods=['GET'])
 def status():
