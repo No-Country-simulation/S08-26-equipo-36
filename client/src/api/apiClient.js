@@ -181,4 +181,10 @@ export const api = {
     request(`/entregas/${idEntrega}`, {
       method: 'DELETE',
     }),
+    // Notificaciones / Tracking
+  enviarEmailTracking: (datos) =>
+    request('/ordenes/enviar-tracking', {
+      method: 'POST',
+      body: JSON.stringify(datos),
+    }),
 };

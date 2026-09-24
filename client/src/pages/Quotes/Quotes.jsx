@@ -194,14 +194,67 @@ export default function Quotes() {
     }
   };
 
-  const setEstado = async (c, nuevoEstado) => {
+const setEstado = async (c, nuevoEstado) => {
     try {
       const res = await api.actualizarEstadoCotizacion(c.id, nuevoEstado);
       if (res?.status === "success") {
-        await reloadData();
         if (nuevoEstado === "aprobada") {
-          navigate("/ordenes");
+          let otNumero = res?.data?.numero || res?.data?.numero_ot || res?.numero || "";
+          let resolvedEmail = c.email || c.cliente_email || c.correo || "";
+          const targetClienteNombre = (c.cliente_nombre || c.cliente || c.razon_social || "").trim().toLowerCase();
+          const targetClienteId = String(c.id_cliente || c.cliente_id || "");
+
+          try {
+            // 1. Obtener la lista completa de clientes para recuperar el email exacto de la BD
+            const clientesRes = await api.getClientes();
+            const listaClientes = Array.isArray(clientesRes) ? clientesRes : (clientesRes?.data || []);
+
+            const clienteEncontrado = listaClientes.find((cli) => {
+              const idMatches = targetClienteId && String(cli.id_cliente || cli.id) === targetClienteId;
+              const nameMatches = targetClienteNombre && (cli.razon_social || cli.nombre || "").trim().toLowerCase() === targetClienteNombre;
+              return idMatches || nameMatches;
+            });
+
+            if (clienteEncontrado) {
+              resolvedEmail = clienteEncontrado.email || clienteEncontrado.correo || "";
+            }
+
+            // 2. Obtener la OT recién generada si la API no la devolvió directamente
+            if (!otNumero) {
+              const ordenesRes = await api.getOrdenes();
+              const ordenes = Array.isArray(ordenesRes) ? ordenesRes : (ordenesRes?.data || []);
+              
+              const matchedOt = ordenes.find(
+                (o) => String(o.id_cotizacion) === String(c.id) || String(o.cotizacion_id) === String(c.id)
+              ) || ordenes[ordenes.length - 1];
+
+              if (matchedOt) {
+                otNumero = matchedOt.numero || `OT-${String(matchedOt.id_ot || matchedOt.id).padStart(4, "0")}`;
+                // Si la OT tiene cliente_email y aún no teníamos email, lo usamos
+                if (!resolvedEmail && (matchedOt.email || matchedOt.cliente_email)) {
+                  resolvedEmail = matchedOt.email || matchedOt.cliente_email;
+                }
+              }
+            }
+          } catch (fetchErr) {
+            console.warn("[Quotes] Error al sincronizar datos:", fetchErr);
+          }
+
+          navigate("/ordenes", {
+            state: {
+              newOrderCreated: true,
+              orderData: {
+                numero: otNumero || "OT-0005",
+                cliente_nombre: c.cliente_nombre || c.cliente || "Cliente",
+                email: resolvedEmail, // Ahora sí toma el email de clientes
+                pieza: c.pieza || c.descripcion || "Pieza mecanizada",
+              },
+            },
+          });
+          return;
         }
+
+        await reloadData();
       }
     } catch (err) {
       console.error("[Quotes] Error al actualizar estado de cotización:", err);

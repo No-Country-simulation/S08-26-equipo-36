@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, Factory, ChevronRight, Inbox, SearchX, FilterX } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Search, Factory, ChevronRight, Inbox, SearchX, FilterX, Send } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
 import { api } from "../../api/apiClient";
+import SendTrackingEmailModal from "../../components/quotes/SendTrackingEmailModal/SendTrackingEmailModal";
 import styles from "./WorkOrders.module.css";
 
 function formatDate(dateString) {
@@ -41,13 +42,28 @@ const EMPTY_STATE_TITLES = {
 
 export default function WorkOrders() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
 
-  // Mapeo entre estados del backend y los tabs de la interfaz
+// Estado para el modal de tracking / email (inicializado directamente si viene por router state)
+  const [trackingModalOpen, setTrackingModalOpen] = useState(
+    Boolean(location.state?.newOrderCreated && location.state?.orderData)
+  );
+  const [selectedOrderForEmail, setSelectedOrderForEmail] = useState(
+    location.state?.orderData || null
+  );
+
+  // Limpiamos el history state para que no se reabra en un F5
+  useEffect(() => {
+    if (location.state?.newOrderCreated) {
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const normalizeEstado = (st) => {
     const s = (st || "creada").toLowerCase();
     if (s === "en_proceso") return "mecanizado";
@@ -104,6 +120,34 @@ export default function WorkOrders() {
   });
 
   const estadosKeys = ["todos", ...Object.keys(OT_ESTADOS)];
+
+const handleOpenEmailModal = async (e, order) => {
+    e.stopPropagation();
+
+    let email = order.email || order.cliente_email || "";
+
+    // Si la orden no trae el email directamente, lo buscamos en clientes
+    if (!email && order.cliente_nombre) {
+      try {
+        const resClientes = await api.getClientes();
+        const lista = Array.isArray(resClientes) ? resClientes : (resClientes?.data || []);
+        const cli = lista.find(
+          (c) => (c.razon_social || "").trim().toLowerCase() === (order.cliente_nombre || "").trim().toLowerCase()
+        );
+        if (cli) email = cli.email || cli.correo || "";
+      } catch (err) {
+        console.warn("No se pudo obtener el email del cliente:", err);
+      }
+    }
+
+    setSelectedOrderForEmail({
+      numero: order.numero || `OT-${String(order.id_ot || order.id).padStart(4, "0")}`,
+      cliente_nombre: order.cliente_nombre,
+      email: email,
+      pieza: order.pieza,
+    });
+    setTrackingModalOpen(true);
+  };
 
   const renderEmptyState = () => {
     if (filtroEstado === "todos" && !search.trim()) {
@@ -221,7 +265,7 @@ export default function WorkOrders() {
                   <th style={{ width: "12%" }}>Entrega est.</th>
                   <th style={{ width: "10%" }}>Prioridad</th>
                   <th style={{ width: "10%" }}>Estado</th>
-                  <th style={{ width: "4%", textAlign: "right" }}></th>
+                  <th style={{ width: "8%", textAlign: "right" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -267,7 +311,27 @@ export default function WorkOrders() {
                         </span>
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        <ChevronRight size={16} className={styles.chevronIcon} />
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+                          <button
+                            type="button"
+                            title="Enviar enlace de seguimiento"
+                            style={{
+                              background: "rgba(245, 158, 11, 0.1)",
+                              border: "1px solid rgba(245, 158, 11, 0.25)",
+                              color: "var(--orange, #f59e0b)",
+                              borderRadius: "6px",
+                              padding: "0.35rem",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={(e) => handleOpenEmailModal(e, o)}
+                          >
+                            <Send size={14} />
+                          </button>
+                          <ChevronRight size={16} className={styles.chevronIcon} />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -277,6 +341,12 @@ export default function WorkOrders() {
           </div>
         )}
       </div>
+
+      <SendTrackingEmailModal
+        isOpen={trackingModalOpen}
+        onClose={() => setTrackingModalOpen(false)}
+        orderData={selectedOrderForEmail}
+      />
     </div>
   );
 }

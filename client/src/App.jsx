@@ -22,6 +22,7 @@ import ResetPassword from "./pages/ResetPassword/ResetPassword";
 import Spinner from "./components/common/Spinner/Spinner";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Welcome from "./pages/Welcome/Welcome";
+import OrderTracking from "./pages/OrderTracking/OrderTracking";
 
 const AUTH_PROTECTION_ENABLED = true;
 
@@ -104,8 +105,9 @@ export default function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          {/* Landing Page Pública */}
+         {/* Landing Page Pública y Seguimiento de OT */}
           <Route path="/landing" element={<Welcome />} />
+          <Route path="/seguimiento" element={<OrderTracking />} />
 
           {/* Rutas Públicas de Autenticación */}
           <Route element={<AuthLayoutWrapper />}>
