@@ -8,12 +8,42 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Trash2,
 } from "lucide-react";
 import styles from "./Inquiries.module.css";
-import ReplyInquiryModal from "../../components/inquiries/ReplyInquiryModal/ReplyInquiryModal"
+import ReplyInquiryModal from "../../components/inquiries/ReplyInquiryModal/ReplyInquiryModal";
+import ConfirmDialog from "../../components/common/ConfirmDialog/ConfirmDialog";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+const EMPTY_STATE_CONFIG = {
+  all: {
+    title: "Sin consultas registradas",
+    description:
+      "Las preguntas técnicas e inquietudes que ingresen desde la Landing Page aparecerán aquí.",
+  },
+  new: {
+    title: "Sin consultas nuevas",
+    description:
+      "No hay consultas pendientes de revisión. Las nuevas solicitudes que ingresen desde la Landing Page aparecerán aquí.",
+  },
+  contacted: {
+    title: "Sin consultas en contacto",
+    description:
+      "No hay consultas en gestión comercial activa actualmente.",
+  },
+  converted: {
+    title: "Sin consultas convertidas",
+    description:
+      "Aún no has transferido ninguna consulta a Solicitud Formal.",
+  },
+  discarded: {
+    title: "Sin consultas descartadas",
+    description:
+      "No tienes consultas marcadas como descartadas.",
+  },
+};
 
 export default function Inquiries() {
   const navigate = useNavigate();
@@ -24,6 +54,9 @@ export default function Inquiries() {
   // Estados para el Modal de respuesta
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Estado para confirmación de descarte
+  const [inquiryToDiscard, setInquiryToDiscard] = useState(null);
 
   // Carga inicial sin cascada de renders
   useEffect(() => {
@@ -77,7 +110,7 @@ export default function Inquiries() {
       });
       if (res.ok) {
         setInquiries((prev) =>
-          prev.map((i) => (i.id === id ? { ...i, status: newStatus } : i)),
+          prev.map((i) => (i.id === id ? { ...i, status: newStatus } : i))
         );
       }
     } catch (err) {
@@ -85,36 +118,35 @@ export default function Inquiries() {
     }
   };
 
+  // Confirmar y aplicar descarte
+  const handleConfirmDiscard = async () => {
+    if (!inquiryToDiscard) return;
+    await handleUpdateStatus(inquiryToDiscard.id, "discarded");
+    setInquiryToDiscard(null);
+  };
+
   // Normalizador del número de teléfono para WhatsApp (Argentina)
   const formatearWhatsAppAR = (rawPhone) => {
     if (!rawPhone) return "";
-    let clean = rawPhone.replace(/\D/g, ""); // Extrae únicamente dígitos
+    let clean = rawPhone.replace(/\D/g, "");
 
-    // Si comienza con 0 (ej: 0351...), remueve el 0 inicial
     if (clean.startsWith("0")) {
       clean = clean.substring(1);
     }
-
-    // Si tiene 54 pero le falta el 9 móvil (ej: 54351...)
     if (clean.startsWith("54") && !clean.startsWith("549")) {
       clean = "549" + clean.substring(2);
     }
-
-    // Si es un número local de 10 dígitos (ej: 3511234567), añade el prefijo 549
     if (clean.length === 10) {
       clean = `549${clean}`;
     }
-
     return clean;
   };
 
-  // Abrir modal de respuesta personalizada
   const handleOpenReplyModal = (inq) => {
     setSelectedInquiry(inq);
     setIsModalOpen(true);
   };
 
-  // Callback ejecutado cuando el correo se despacha exitosamente
   const handleEmailSentSuccess = (id) => {
     handleUpdateStatus(id, "contacted");
   };
@@ -160,7 +192,6 @@ export default function Inquiries() {
       const clientName = (inquiry.company || inquiry.fullName || "").trim();
       let clientId = null;
 
-      // 1. Buscar si el cliente ya existe
       const resClientes = await fetch(`${API_BASE}/clientes`);
       const dataClientes = await resClientes.json();
 
@@ -179,7 +210,6 @@ export default function Inquiries() {
         }
       }
 
-      // 2. Si no existe, crearlo
       if (!clientId) {
         const resCreate = await fetch(`${API_BASE}/clientes`, {
           method: "POST",
@@ -201,10 +231,8 @@ export default function Inquiries() {
         }
       }
 
-      // Texto unificado para análisis de cantidad y material
       const textToAnalyze = `${inquiry.piece || ""} ${inquiry.description || inquiry.message || ""}`;
 
-      // 3. Extraer cantidad si está en el texto
       let detectedQty = inquiry.quantity || 1;
       if (!inquiry.quantity) {
         const match = textToAnalyze.match(
@@ -215,7 +243,6 @@ export default function Inquiries() {
         }
       }
 
-      // 4. Detección de material
       let detectedMaterial = inquiry.material || "";
       if (!detectedMaterial) {
         const materialPatterns = [
@@ -237,7 +264,6 @@ export default function Inquiries() {
         }
       }
 
-      // 5. Navegar a /solicitudes
       navigate("/solicitudes", {
         state: {
           openModal: true,
@@ -302,6 +328,8 @@ export default function Inquiries() {
     return { date, time };
   };
 
+  const currentEmptyState = EMPTY_STATE_CONFIG[filter] || EMPTY_STATE_CONFIG.all;
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -341,11 +369,18 @@ export default function Inquiries() {
             <div className={styles.emptyIconWrapper}>
               <Inbox size={22} strokeWidth={1.75} />
             </div>
-            <h3 className={styles.emptyTitle}>Sin consultas registradas</h3>
-            <p className={styles.emptySubtitle}>
-              Las preguntas técnicas e inquietudes que ingresen desde la Landing
-              Page aparecerán aquí.
-            </p>
+            <h3 className={styles.emptyTitle}>{currentEmptyState.title}</h3>
+            <p className={styles.emptySubtitle}>{currentEmptyState.description}</p>
+            {filter !== "all" && inquiries.length > 0 && (
+              <button
+                type="button"
+                className={styles.tabBtn}
+                style={{ marginTop: "14px", height: "32px", fontSize: "12px" }}
+                onClick={() => setFilter("all")}
+              >
+                Ver todas las consultas
+              </button>
+            )}
           </div>
         ) : (
           <div className={styles.tableWrapper}>
@@ -438,7 +473,7 @@ export default function Inquiries() {
                       <td>
                         <div className={styles.actionsCol}>
                           <div className={styles.actionIconContainer}>
-                            {/* Botón de Correo Institucional (Abre el Modal con texto libre) */}
+                            {/* Botón de Correo Institucional */}
                             <button
                               type="button"
                               className={styles.actionIconBtn}
@@ -476,6 +511,18 @@ export default function Inquiries() {
                                 </svg>
                               </a>
                             ) : null}
+
+                            {/* Botón para Descartar Consulta */}
+                            {inq.status !== "discarded" && (
+                              <button
+                                type="button"
+                                className={`${styles.actionIconBtn} ${styles.actionIconBtnDanger}`}
+                                title="Descartar consulta"
+                                onClick={() => setInquiryToDiscard(inq)}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
 
                           <button
@@ -507,6 +554,27 @@ export default function Inquiries() {
         onClose={() => setIsModalOpen(false)}
         inquiry={selectedInquiry}
         onEmailSent={handleEmailSentSuccess}
+      />
+
+      {/* Modal de confirmación para Descartar Consulta */}
+      <ConfirmDialog
+        isOpen={Boolean(inquiryToDiscard)}
+        onClose={() => setInquiryToDiscard(null)}
+        onConfirm={handleConfirmDiscard}
+        title="Descartar consulta"
+        confirmText="Descartar"
+        description={
+          inquiryToDiscard ? (
+            <>
+              ¿Estás seguro de descartar la consulta de{" "}
+              <strong>"{inquiryToDiscard.fullName}"</strong> sobre{" "}
+              <strong>"{inquiryToDiscard.piece || "mecanizado"}"</strong>? Podrás
+              consultarla luego en la pestaña <em>Descartadas</em>.
+            </>
+          ) : (
+            ""
+          )
+        }
       />
     </div>
   );
