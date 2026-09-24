@@ -62,7 +62,9 @@ function InternalLayout() {
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh", // Anclado a la altura exacta del viewport
+        width: "100%",
+        overflow: "hidden", // Evita que la ventana completa genere scroll
         backgroundColor: "var(--bg-main)",
       }}
     >
@@ -71,10 +73,11 @@ function InternalLayout() {
       <main
         style={{
           flex: 1,
-          width: "100%",
-          minHeight: "100vh",
+          height: "100vh",
+          overflowY: "auto", // El scroll solo aparece aquí cuando el contenido lo excede
           overflowX: "hidden",
-          padding: isShopFloor ? 0 : "32px 40px",
+          padding: 0, // 👈 Eliminamos el padding duplicado (las páginas ya lo gestionan en .container)
+          boxSizing: "border-box",
         }}
       >
         <Outlet />

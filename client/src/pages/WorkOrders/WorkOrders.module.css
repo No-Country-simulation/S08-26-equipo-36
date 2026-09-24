@@ -52,19 +52,21 @@
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  width: 100%;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 1100px) {
   .toolbar {
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
   }
 }
 
 .searchWrapper {
   position: relative;
-  flex: 1;
-  max-width: 384px;
+  width: 100%;
+  max-width: min(380px, 100%);
 }
 
 .searchIcon {
@@ -85,7 +87,7 @@
   border-radius: 6px;
   padding: 0 12px 0 36px;
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--text-white);
   outline: none;
   transition: border-color 0.15s ease;
@@ -101,22 +103,27 @@
 
 /* Filtros en tabs */
 .filtersScroll {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
+ display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(3px, 0.4vw, 6px);
+  width: 100%;
 }
 
-.filtersScroll::-webkit-scrollbar {
+/* .filtersScroll::-webkit-scrollbar {
   display: none;
-}
+} */
 
 .filterBtn {
-  padding: 6px 12px;
+  /* Padding vertical: 5px a 7px */
+  /* Padding horizontal: 6px en tablet a 12px en desktop */
+  padding: clamp(0.28rem, 0.22rem + 0.2vw, 0.42rem) clamp(0.38rem, 0.25rem + 0.35vw, 0.75rem);
+  
+  /* Tipografía fluida: 11px en tablet a 13px en desktop */
+  font-size: clamp(0.6875rem, 0.62rem + 0.22vw, 0.8125rem);
+  
   border-radius: 6px;
   font-family: var(--font-sans);
-  font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
@@ -124,6 +131,7 @@
   background-color: var(--border-subtle);
   color: var(--text-secondary);
   transition: all 0.15s ease;
+  line-height: 1.2;
 }
 
 .filterBtn:hover {
