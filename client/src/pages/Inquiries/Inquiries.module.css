@@ -359,7 +359,7 @@
     background-color 0.15s ease,
     color 0.15s ease;
   text-decoration: none;
-  width: 15px;
+  width: auto;
 }
 
 .actionIconBtn:hover {

@@ -1,0 +1,190 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 26, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 540px;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+}
+
+.header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.iconBox {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  padding: 0.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.headerInfo {
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  color: #f3f4f6;
+  font-weight: 600;
+}
+
+.clientTag {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.closeBtn {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+}
+
+.form {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.inquirySnapshot {
+  background: #1e293b;
+  border-left: 3px solid #f59e0b;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0 6px 6px 0;
+}
+
+.snapshotLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+  display: block;
+}
+
+.snapshotText {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.input,
+.textarea,
+.inputDisabled {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.inputDisabled {
+  color: #94a3b8;
+  opacity: 0.75;
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #f59e0b;
+}
+
+.errorMessage {
+  margin: 0;
+  color: #ef4444;
+  font-size: 0.8rem;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.btnSecondary {
+  background: #1f2937;
+  color: #cbd5e1;
+  border: none;
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btnSecondary:hover {
+  background: #374151;
+}
+
+.btnPrimary {
+  background: #f59e0b;
+  color: #0b0f19;
+  border: none;
+  padding: 0.55rem 1.15rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.btnPrimary:hover {
+  background: #d97706;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

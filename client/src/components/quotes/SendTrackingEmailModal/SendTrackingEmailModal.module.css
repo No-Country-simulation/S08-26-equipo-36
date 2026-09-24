@@ -1,0 +1,272 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(5, 8, 16, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.modal {
+  background-color: var(--bg-card, #0e1422);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  padding: 1.75rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary, #f3f4f6);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--orange, #f59e0b);
+  flex-shrink: 0;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.otBadge {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--orange, #f59e0b);
+  letter-spacing: 0.05em;
+}
+
+.closeBtn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.closeBtn:hover {
+  color: #ffffff;
+}
+
+.body {
+  margin-bottom: 1.5rem;
+}
+
+.description {
+  font-size: 0.88rem;
+  color: var(--text-muted, #9ca3af);
+  line-height: 1.5;
+  margin: 0 0 1.15rem;
+}
+
+.description strong {
+  color: #f3f4f6;
+}
+
+.metaBox {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.metaLabel {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.metaValue {
+  color: #e2e8f0;
+  font-weight: 500;
+  text-align: right;
+  max-width: 65%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linkContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #07090e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+}
+
+.linkText {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: #93c5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.copyBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.errorMessage {
+  color: #ef4444;
+  font-size: 0.82rem;
+  margin: 0.75rem 0 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mainActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btnSecondary {
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 0.84rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnWhatsApp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  color: #25d366;
+  font-weight: 600;
+  font-size: 0.84rem;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btnWhatsApp:hover {
+  background: rgba(37, 211, 102, 0.2);
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.15rem;
+  background: var(--orange, #f59e0b);
+  color: #0b0f19;
+  font-weight: 700;
+  font-size: 0.84rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.1s;
+}
+
+.btnPrimary:hover {
+  filter: brightness(1.1);
+}
+
+.btnPrimary:active {
+  transform: scale(0.98);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
