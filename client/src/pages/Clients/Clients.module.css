@@ -209,10 +209,14 @@
   border-radius: 6px;
   color: var(--slate);
   cursor: pointer;
+   transition: background-color 0.15s ease, color 0.15s ease;
+  display: none;
+}
+
+article:hover .iconBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .iconBtn:hover {

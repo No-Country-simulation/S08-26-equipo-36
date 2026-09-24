@@ -73,6 +73,11 @@ function getStatusIndex(status = "") {
 export default function OrderTracking() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Forzar recálculo del viewport para DevTools y navegadores móviles al montar la vista
+  useEffect(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, []);
+
   const otQuery = searchParams.get("ot") || searchParams.get("codigo") || "";
   const [inputValue, setInputValue] = useState(otQuery);
   const [loading, setLoading] = useState(false);
