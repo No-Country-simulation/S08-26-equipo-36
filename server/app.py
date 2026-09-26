@@ -192,7 +192,7 @@ def get_cotizaciones():
     try:
         cursor = conexion.cursor(dictionary=True)
         sql = """
-            SELECT 
+            SELECT
                 c.id_cotizacion,
                 c.solicitud_id,
                 c.id_cliente,
@@ -205,9 +205,11 @@ def get_cotizaciones():
                 c.detalle,
                 c.estado,
                 c.fecha_emission AS fecha_emision,
-                c.orden_trabajo_id
+                c.orden_trabajo_id,
+                ot.numero AS ot_numero
             FROM cotizaciones c
             LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
+            LEFT JOIN ordenes_trabajo ot ON c.orden_trabajo_id = ot.id_ot
             ORDER BY c.id_cotizacion DESC
         """
         cursor.execute(sql)
@@ -491,8 +493,8 @@ def listar_ordenes():
         if 'cursor' in locals(): cursor.close()
         if conexion.is_connected(): conexion.close()
 
-@app.route('/api/ordenes/<int:id_ot>', methods=['GET'])
-def obtener_detalle_orden(id_ot):
+@app.route('/api/ordenes/<identificador>', methods=['GET'])
+def obtener_detalle_orden(identificador):
     conexion = get_db_connection()
     if not conexion:
         return jsonify({"status": "error", "message": "No hay conexión a la base de datos"}), 500
@@ -507,11 +509,11 @@ def obtener_detalle_orden(id_ot):
                 c.validez AS cot_validez
             FROM ordenes_trabajo ot
             LEFT JOIN cotizaciones c ON ot.id_cotizacion = c.id_cotizacion
-            WHERE ot.id_ot = %s
+            WHERE ot.id_ot = %s OR ot.numero = %s
         """
-        cursor.execute(sql_ot, (id_ot,))
+        # Le pasamos "identificador" a ambos %s
+        cursor.execute(sql_ot, (identificador, identificador))
         orden = cursor.fetchone()
-
         if not orden:
             return jsonify({"status": "error", "message": "Orden de Trabajo no encontrada"}), 404
 
