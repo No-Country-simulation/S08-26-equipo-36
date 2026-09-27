@@ -284,7 +284,7 @@ const handleOpenEmailModal = async (e, order) => {
                     <tr
                       key={o.id}
                       className={styles.rowLink}
-                      onClick={() => navigate(`/ordenes/${o.id}`)}
+                      onClick={() => navigate(`/ordenes/${o.numero || o.id_ot || o.id}`)}
                     >
                       <td>
                         <div className={styles.otCell}>

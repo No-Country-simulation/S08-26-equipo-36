@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, FileCheck, Search, Check, X, ArrowRightCircle, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  FileCheck,
+  Search,
+  Check,
+  X,
+  ArrowRightCircle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import QuoteModal from "../../components/quotes/QuoteModal/QuoteModal";
 import EmptyState from "../../components/common/EmptyState/EmptyState";
 import Spinner from "../../components/common/Spinner/Spinner";
@@ -28,6 +37,9 @@ const formatQuote = (c) => ({
   solicitud_id: c.solicitud_id,
   cliente_id: c.id_cliente,
   fecha: c.fecha_emision || c.fecha,
+  // Tomamos el número de negocio que agregó backend:
+  ot_numero: c.ot_numero || c.numero_ot || c.numero || null,
+  orden_trabajo_id: c.orden_trabajo_id || c.identificador || null,
 });
 
 const formatSolicitud = (s) => ({
@@ -69,7 +81,9 @@ export default function Quotes() {
       const [resCot, resSol, resCli] = await Promise.all([
         api.getCotizaciones(),
         api.getSolicitudes(),
-        typeof api.getClientes === "function" ? api.getClientes() : Promise.resolve({ data: [] }),
+        typeof api.getClientes === "function"
+          ? api.getClientes()
+          : Promise.resolve({ data: [] }),
       ]);
 
       if (resCot?.status === "success" && Array.isArray(resCot.data)) {
@@ -84,7 +98,10 @@ export default function Quotes() {
         setClients(resCli.data.map(formatClient));
       }
     } catch (err) {
-      console.error("[Quotes] Error al recargar cotizaciones/solicitudes:", err);
+      console.error(
+        "[Quotes] Error al recargar cotizaciones/solicitudes:",
+        err,
+      );
     }
   };
 
@@ -97,7 +114,9 @@ export default function Quotes() {
         const [resCot, resSol, resCli] = await Promise.all([
           api.getCotizaciones(),
           api.getSolicitudes(),
-          typeof api.getClientes === "function" ? api.getClientes() : Promise.resolve({ data: [] }),
+          typeof api.getClientes === "function"
+            ? api.getClientes()
+            : Promise.resolve({ data: [] }),
           minDelay,
         ]);
 
@@ -131,7 +150,7 @@ export default function Quotes() {
   const availableRequests = solicitudes.filter(
     (s) =>
       !items.some((c) => String(c.solicitud_id) === String(s.id)) ||
-      (editingItem && String(editingItem.solicitud_id) === String(s.id))
+      (editingItem && String(editingItem.solicitud_id) === String(s.id)),
   );
 
   const handleOpenNew = () => {
@@ -146,7 +165,9 @@ export default function Quotes() {
 
   const handleSave = async (formData) => {
     try {
-      const sol = solicitudes.find((s) => String(s.id) === String(formData.solicitud_id));
+      const sol = solicitudes.find(
+        (s) => String(s.id) === String(formData.solicitud_id),
+      );
       const precio_unitario = Number(formData.precio_unitario) || 0;
       const qty = Number(sol?.cantidad || formData.cantidad || 1);
       const precio_total = precio_unitario * qty;
@@ -194,44 +215,70 @@ export default function Quotes() {
     }
   };
 
-const setEstado = async (c, nuevoEstado) => {
+  const setEstado = async (c, nuevoEstado) => {
     try {
       const res = await api.actualizarEstadoCotizacion(c.id, nuevoEstado);
       if (res?.status === "success") {
         if (nuevoEstado === "aprobada") {
-          let otNumero = res?.data?.numero || res?.data?.numero_ot || res?.numero || "";
+          let otNumero =
+            res?.data?.numero || res?.data?.numero_ot || res?.numero || "";
           let resolvedEmail = c.email || c.cliente_email || c.correo || "";
-          const targetClienteNombre = (c.cliente_nombre || c.cliente || c.razon_social || "").trim().toLowerCase();
+          const targetClienteNombre = (
+            c.cliente_nombre ||
+            c.cliente ||
+            c.razon_social ||
+            ""
+          )
+            .trim()
+            .toLowerCase();
           const targetClienteId = String(c.id_cliente || c.cliente_id || "");
 
           try {
             // 1. Obtener la lista completa de clientes para recuperar el email exacto de la BD
             const clientesRes = await api.getClientes();
-            const listaClientes = Array.isArray(clientesRes) ? clientesRes : (clientesRes?.data || []);
+            const listaClientes = Array.isArray(clientesRes)
+              ? clientesRes
+              : clientesRes?.data || [];
 
             const clienteEncontrado = listaClientes.find((cli) => {
-              const idMatches = targetClienteId && String(cli.id_cliente || cli.id) === targetClienteId;
-              const nameMatches = targetClienteNombre && (cli.razon_social || cli.nombre || "").trim().toLowerCase() === targetClienteNombre;
+              const idMatches =
+                targetClienteId &&
+                String(cli.id_cliente || cli.id) === targetClienteId;
+              const nameMatches =
+                targetClienteNombre &&
+                (cli.razon_social || cli.nombre || "").trim().toLowerCase() ===
+                  targetClienteNombre;
               return idMatches || nameMatches;
             });
 
             if (clienteEncontrado) {
-              resolvedEmail = clienteEncontrado.email || clienteEncontrado.correo || "";
+              resolvedEmail =
+                clienteEncontrado.email || clienteEncontrado.correo || "";
             }
 
             // 2. Obtener la OT recién generada si la API no la devolvió directamente
             if (!otNumero) {
               const ordenesRes = await api.getOrdenes();
-              const ordenes = Array.isArray(ordenesRes) ? ordenesRes : (ordenesRes?.data || []);
-              
-              const matchedOt = ordenes.find(
-                (o) => String(o.id_cotizacion) === String(c.id) || String(o.cotizacion_id) === String(c.id)
-              ) || ordenes[ordenes.length - 1];
+              const ordenes = Array.isArray(ordenesRes)
+                ? ordenesRes
+                : ordenesRes?.data || [];
+
+              const matchedOt =
+                ordenes.find(
+                  (o) =>
+                    String(o.id_cotizacion) === String(c.id) ||
+                    String(o.cotizacion_id) === String(c.id),
+                ) || ordenes[ordenes.length - 1];
 
               if (matchedOt) {
-                otNumero = matchedOt.numero || `OT-${String(matchedOt.id_ot || matchedOt.id).padStart(4, "0")}`;
+                otNumero =
+                  matchedOt.numero ||
+                  `OT-${String(matchedOt.identificador || matchedOt.id).padStart(4, "0")}`;
                 // Si la OT tiene cliente_email y aún no teníamos email, lo usamos
-                if (!resolvedEmail && (matchedOt.email || matchedOt.cliente_email)) {
+                if (
+                  !resolvedEmail &&
+                  (matchedOt.email || matchedOt.cliente_email)
+                ) {
                   resolvedEmail = matchedOt.email || matchedOt.cliente_email;
                 }
               }
@@ -266,7 +313,7 @@ const setEstado = async (c, nuevoEstado) => {
       .filter(Boolean)
       .join(" ")
       .toLowerCase()
-      .includes(search.toLowerCase())
+      .includes(search.toLowerCase()),
   );
 
   if (loading) {
@@ -282,7 +329,11 @@ const setEstado = async (c, nuevoEstado) => {
             Ofertas generadas a partir de solicitudes de clientes.
           </p>
         </div>
-        <button type="button" onClick={handleOpenNew} className={styles.btnPrimary}>
+        <button
+          type="button"
+          onClick={handleOpenNew}
+          className={styles.btnPrimary}
+        >
           <Plus size={16} strokeWidth={2.5} style={{ marginRight: 6 }} />
           Nueva cotización
         </button>
@@ -308,14 +359,19 @@ const setEstado = async (c, nuevoEstado) => {
               ? "No se encontraron cotizaciones con ese criterio de búsqueda."
               : "Genera tu primera cotización a partir de una solicitud registrada."
           }
-          actionLabel={!search && availableRequests.length > 0 ? "Nueva cotización" : null}
-          onAction={!search && availableRequests.length > 0 ? handleOpenNew : null}
+          actionLabel={
+            !search && availableRequests.length > 0 ? "Nueva cotización" : null
+          }
+          onAction={
+            !search && availableRequests.length > 0 ? handleOpenNew : null
+          }
         />
       ) : (
         <div className={styles.grid}>
           {filtered.map((c) => {
             const statusKey = (c.estado || "pendiente").toLowerCase();
-            const statusObj = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pendiente;
+            const statusObj =
+              STATUS_CONFIG[statusKey] || STATUS_CONFIG.pendiente;
 
             return (
               <article key={c.id} className={styles.card}>
@@ -338,12 +394,16 @@ const setEstado = async (c, nuevoEstado) => {
 
                   <div className={styles.priceRow}>
                     <div>
-                      <p className={styles.totalPrice}>{currency(c.precio_total)}</p>
+                      <p className={styles.totalPrice}>
+                        {currency(c.precio_total)}
+                      </p>
                       <p className={styles.unitDetail}>
                         {c.cantidad} u. · {currency(c.precio_unitario)} c/u
                       </p>
                     </div>
-                    <span className={styles.dateText}>{formatDate(c.fecha)}</span>
+                    <span className={styles.dateText}>
+                      {formatDate(c.fecha)}
+                    </span>
                   </div>
                 </div>
 
@@ -383,11 +443,17 @@ const setEstado = async (c, nuevoEstado) => {
                         <Trash2 size={15} />
                       </button>
                     </>
-                  ) : statusKey === "aprobada" && c.orden_trabajo_id ? (
+                  ) : statusKey === "aprobada" &&
+                    (c.ot_numero || c.orden_trabajo_id) ? (
                     <button
                       type="button"
-                      onClick={() => navigate("/ordenes")}
+                      onClick={() =>
+                        navigate(
+                          `/ordenes/${c.ot_numero || c.orden_trabajo_id}`,
+                        )
+                      }
                       className={styles.btnViewOt}
+                      title="Ver detalle del expediente de la OT"
                     >
                       <ArrowRightCircle size={14} style={{ marginRight: 4 }} />
                       Ver OT
@@ -422,7 +488,8 @@ const setEstado = async (c, nuevoEstado) => {
         description={
           toDelete ? (
             <>
-              ¿Eliminar la cotización de <strong>"{toDelete.pieza}"</strong>? Esta acción no se puede deshacer.
+              ¿Eliminar la cotización de <strong>"{toDelete.pieza}"</strong>?
+              Esta acción no se puede deshacer.
             </>
           ) : (
             ""

@@ -18,6 +18,7 @@ import {
   Truck,
   Pencil,
   X,
+  Lock,
 } from "lucide-react";
 import RoadmapTab from "../../components/workOrders/tabs/RoadmapTab/RoadmapTab";
 import DocumentsTab from "../../components/workOrders/tabs/DocumentsTab/DocumentsTab";
@@ -37,8 +38,16 @@ const TABS_CONFIG = [
 
 const OT_HEADER_STATUSES = [
   { value: "creada", label: "Creada", className: styles.statusCreada },
-  { value: "mecanizado", label: "En Mecanizado", className: styles.statusMecanizado },
-  { value: "calidad", label: "Control Calidad", className: styles.statusCalidad },
+  {
+    value: "mecanizado",
+    label: "En Mecanizado",
+    className: styles.statusMecanizado,
+  },
+  {
+    value: "calidad",
+    label: "Control Calidad",
+    className: styles.statusCalidad,
+  },
   { value: "liberada", label: "Liberada", className: styles.statusLiberada },
   { value: "entregada", label: "Entregada", className: styles.statusEntregada },
   { value: "cancelada", label: "Cancelada", className: styles.statusCancelada },
@@ -89,34 +98,65 @@ export default function WorkOrderDetails() {
 
     async function fetchOtDetail() {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
+        const minDelay = new Promise((resolve) => setTimeout(resolve, 400));
+
+        // 1. Buscamos el detalle de la OT (soporta tanto 'OT-0004' como 7)
         const [res] = await Promise.all([api.getDetalleOrden(id), minDelay]);
 
         if (!isMounted) return;
 
         if (res?.status === "success" && res.data) {
           const dbData = res.data;
+          const realId = dbData.id_ot || dbData.id;
+
           setOt({
             ...dbData,
-            id: dbData.id_ot || dbData.id,
+            id: realId,
             estado: normalizeDbToUiStatus(dbData.estado_actual),
           });
           setRespValue(dbData.responsable || "");
 
-          const storageKey = `qt_ops_${dbData.id_ot || dbData.id}`;
-          const storedOps = localStorage.getItem(storageKey);
-          if (storedOps) {
-            try {
-              setOperations(JSON.parse(storedOps));
-            } catch {
-              setOperations([]);
+          // 2. Traemos las operaciones usando SIEMPRE el ID numérico técnico
+          try {
+            if (typeof api.getOperacionesOrden === "function") {
+              const opsRes = await api.getOperacionesOrden(realId);
+              if (opsRes?.status === "success" && Array.isArray(opsRes.data)) {
+                const mappedOps = opsRes.data.map((item, index) => ({
+                  id: item.id_operacion || item.id,
+                  step: item.secuencia || (index + 1) * 10,
+                  name: item.descripcion_tarea || item.nombre || "Operación",
+                  type: item.tipo || "Torneado",
+                  operator: item.operario_asignado || item.operario || "—",
+                  time: item.tiempo_estimado
+                    ? `${item.tiempo_estimado} min`
+                    : "—",
+                  machine: item.maquina || "Taller General",
+                  status: (item.estado || "pendiente").toLowerCase(),
+                  description: item.descripcion_tarea || item.descripcion || "",
+                  estimatedTime: item.tiempo_estimado || 0,
+                  realTime: item.tiempo_real || 0,
+                }));
+                setOperations(mappedOps);
+                return;
+              }
             }
-          } else {
-            setOperations([]);
+          } catch (opErr) {
+            console.warn(
+              "[WorkOrderDetails] Error al cargar operaciones por API:",
+              opErr,
+            );
           }
+
+          // Fallback a localStorage si fallara la API de operaciones
+          const storageKey = `qt_ops_${realId}`;
+          const storedOps = localStorage.getItem(storageKey);
+          setOperations(storedOps ? JSON.parse(storedOps) : []);
+        } else {
+          setOt(null);
         }
       } catch (err) {
         console.error("[WorkOrderDetails] Error al cargar la OT:", err);
+        setOt(null);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -139,9 +179,18 @@ export default function WorkOrderDetails() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Validación de Gate 1: Requiere operaciones existentes y 100% completadas
+  const isMachiningComplete =
+    operations.length > 0 &&
+    operations.every((op) => op.status === "completada");
+
   const handleSelectStatus = async (newUiStatus) => {
     const dbStatus = normalizeUiToDbStatus(newUiStatus);
-    setOt((prev) => ({ ...prev, estado: newUiStatus, estado_actual: dbStatus }));
+    setOt((prev) => ({
+      ...prev,
+      estado: newUiStatus,
+      estado_actual: dbStatus,
+    }));
     setIsOtStatusMenuOpen(false);
 
     try {
@@ -149,7 +198,10 @@ export default function WorkOrderDetails() {
       setIsFlashing(true);
       setTimeout(() => setIsFlashing(false), 600);
     } catch (err) {
-      console.error("[WorkOrderDetails] Error al actualizar estado en la base de datos:", err);
+      console.error(
+        "[WorkOrderDetails] Error al actualizar estado en la base de datos:",
+        err,
+      );
     }
   };
 
@@ -169,7 +221,9 @@ export default function WorkOrderDetails() {
 
   const handleOpStatusChange = (opId, newStatus) => {
     setOperations((prev) => {
-      const updated = prev.map((o) => (o.id === opId ? { ...o, status: newStatus } : o));
+      const updated = prev.map((o) =>
+        o.id === opId ? { ...o, status: newStatus.toLowerCase() } : o,
+      );
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
@@ -177,7 +231,10 @@ export default function WorkOrderDetails() {
 
   const handleAddOperation = (newOp) => {
     setOperations((prev) => {
-      const updated = [...prev, newOp];
+      const updated = [
+        ...prev,
+        { ...newOp, status: (newOp.status || "pendiente").toLowerCase() },
+      ];
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
@@ -185,7 +242,15 @@ export default function WorkOrderDetails() {
 
   const handleUpdateOperation = (opId, updatedData) => {
     setOperations((prev) => {
-      const updated = prev.map((op) => (op.id === opId ? { ...op, ...updatedData } : op));
+      const updated = prev.map((op) =>
+        op.id === opId
+          ? {
+              ...op,
+              ...updatedData,
+              status: (updatedData.status || op.status).toLowerCase(),
+            }
+          : op,
+      );
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
@@ -232,19 +297,24 @@ export default function WorkOrderDetails() {
           <div className={styles.titleArea}>
             <div className={styles.titleRow}>
               <h1 className={styles.otNumber}>
-                {ot.numero || `OT-${String(ot.id_ot || ot.id).padStart(4, "0")}`}
+                {ot.numero ||
+                  `OT-${String(ot.id_ot || ot.id).padStart(4, "0")}`}
               </h1>
-              <span className={`${styles.badge} ${currentOtStatusObj.className}`}>
+              <span
+                className={`${styles.badge} ${currentOtStatusObj.className}`}
+              >
                 <span className={styles.dot} />
                 {currentOtStatusObj.label}
               </span>
               <span className={`${styles.badge} ${styles.prioAlta}`}>
                 <span className={styles.dot} />
-                {(ot.prioridad || "media")}
+                {ot.prioridad || "media"}
               </span>
             </div>
 
-            <p className={styles.pieceTitle}>{ot.pieza || "Pieza no especificada"}</p>
+            <p className={styles.pieceTitle}>
+              {ot.pieza || "Pieza no especificada"}
+            </p>
 
             <p className={styles.descriptionText}>
               {ot.descripcion || "Sin descripción de requerimiento registrada."}
@@ -277,7 +347,9 @@ export default function WorkOrderDetails() {
                   onClick={() => handleSelectStatus(st.value)}
                 >
                   <span>{st.label}</span>
-                  {ot.estado === st.value && <Check size={14} className={styles.checkIcon} />}
+                  {ot.estado === st.value && (
+                    <Check size={14} className={styles.checkIcon} />
+                  )}
                 </button>
               ))}
             </div>
@@ -320,7 +392,9 @@ export default function WorkOrderDetails() {
           <p className={styles.metaLabel}>
             <Calendar size={12} /> Entrega estimada
           </p>
-          <p className={styles.metaValue}>{formatDate(ot.fecha_entrega_estimada)}</p>
+          <p className={styles.metaValue}>
+            {formatDate(ot.fecha_entrega_estimada)}
+          </p>
         </div>
 
         {/* Tarjeta Responsable Editable */}
@@ -339,7 +413,10 @@ export default function WorkOrderDetails() {
           </p>
 
           {isEditingResp ? (
-            <div className={styles.respForm} onClick={(e) => e.stopPropagation()}>
+            <div
+              className={styles.respForm}
+              onClick={(e) => e.stopPropagation()}
+            >
               <input
                 type="text"
                 autoFocus
@@ -398,19 +475,36 @@ export default function WorkOrderDetails() {
         </div>
       </div>
 
+      {/* Tabs con Quality Gate 1 */}
       <div className={styles.tabsContainer}>
         {TABS_CONFIG.map((tab) => {
           const Icon = tab.icon;
+
+          // Documentación y Hoja de Ruta siempre libres. Control, NC y Entrega se bloquean si la fabricación no concluyó.
+          const isTabBlocked =
+            (tab.id === "calidad" || tab.id === "nc" || tab.id === "entrega") &&
+            !isMachiningComplete;
+
           return (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              disabled={isTabBlocked}
+              onClick={() => !isTabBlocked && setActiveTab(tab.id)}
+              title={
+                isTabBlocked
+                  ? "Pestaña bloqueada: Deben completarse todas las operaciones de la Hoja de Ruta antes de avanzar"
+                  : ""
+              }
               className={`${styles.tabBtn} ${
                 activeTab === tab.id ? styles.tabBtnActive : ""
-              }`}
+              } ${isTabBlocked ? styles.tabBtnDisabled : ""}`}
             >
-              <Icon size={15} /> {tab.label}
+              <Icon size={15} />
+              <span>{tab.label}</span>
+              {isTabBlocked && (
+                <Lock size={12} className={styles.tabLockIcon} />
+              )}
             </button>
           );
         })}
@@ -419,6 +513,8 @@ export default function WorkOrderDetails() {
       <div className={styles.tabContentCard}>
         {activeTab === "hoja-de-ruta" && (
           <RoadmapTab
+            otId={ot.id}
+            ot={ot}
             operations={operations}
             onOpStatusChange={handleOpStatusChange}
             onAddOperation={handleAddOperation}
@@ -431,11 +527,7 @@ export default function WorkOrderDetails() {
           <QualityTab otId={ot.id} ot={ot} operations={operations} />
         )}
         {activeTab === "nc" && (
-          <NonConformitiesTab
-            otId={ot.id}
-            ot={ot}
-            operations={operations}
-          />
+          <NonConformitiesTab otId={ot.id} ot={ot} operations={operations} />
         )}
         {activeTab === "entrega" && <DeliveryTab otId={ot.id} ot={ot} />}
       </div>

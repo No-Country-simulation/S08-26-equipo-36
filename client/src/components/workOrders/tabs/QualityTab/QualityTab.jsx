@@ -57,14 +57,19 @@ function QualityControlModal({
   dbOperations,
   defaultInspector,
 }) {
-  const matchedOp = dbOperations.find((o) => o.id === editingControl?.operacionId);
+  const matchedOp = dbOperations.find(
+    (o) => o.id === editingControl?.operacionId,
+  );
 
   const [form, setForm] = useState(() => ({
     type: editingControl?.type || "Dimensional",
     resultado: editingControl?.status || "aprobado",
     operacionId: editingControl?.operacionId || null,
-    operacionLabel: matchedOp ? matchedOp.label : editingControl?.operacion || "Ninguna",
-    inspector: editingControl?.inspector || defaultInspector || "Inspector de Calidad",
+    operacionLabel: matchedOp
+      ? matchedOp.label
+      : editingControl?.operacion || "Ninguna",
+    inspector:
+      editingControl?.inspector || defaultInspector || "Inspector de Calidad",
     medicion: editingControl?.medicion || "",
     tolerancia: editingControl?.tolerancia || "",
     observaciones: editingControl?.observaciones || "",
@@ -115,7 +120,9 @@ function QualityControlModal({
       >
         <div className={styles.modalHeader}>
           <h3 className={styles.modalTitle}>
-            {editingControl ? "Editar control de calidad" : "Nuevo control de calidad"}
+            {editingControl
+              ? "Editar control de calidad"
+              : "Nuevo control de calidad"}
           </h3>
           <button
             type="button"
@@ -149,7 +156,9 @@ function QualityControlModal({
                       key={typeOption}
                       type="button"
                       className={`${styles.customDropdownOption} ${
-                        form.type === typeOption ? styles.customDropdownOptionSelected : ""
+                        form.type === typeOption
+                          ? styles.customDropdownOptionSelected
+                          : ""
                       }`}
                       onClick={() => {
                         setForm({ ...form, type: typeOption });
@@ -157,7 +166,9 @@ function QualityControlModal({
                       }}
                     >
                       <span>{typeOption}</span>
-                      {form.type === typeOption && <Check size={14} className={styles.checkIcon} />}
+                      {form.type === typeOption && (
+                        <Check size={14} className={styles.checkIcon} />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -184,7 +195,9 @@ function QualityControlModal({
                       key={resOption.value}
                       type="button"
                       className={`${styles.customDropdownOption} ${
-                        form.resultado === resOption.value ? styles.customDropdownOptionSelected : ""
+                        form.resultado === resOption.value
+                          ? styles.customDropdownOptionSelected
+                          : ""
                       }`}
                       onClick={() => {
                         setForm({ ...form, resultado: resOption.value });
@@ -223,7 +236,9 @@ function QualityControlModal({
                   <button
                     type="button"
                     className={`${styles.customDropdownOption} ${
-                      form.operacionId === null ? styles.customDropdownOptionSelected : ""
+                      form.operacionId === null
+                        ? styles.customDropdownOptionSelected
+                        : ""
                     }`}
                     onClick={() => {
                       setForm({
@@ -235,7 +250,9 @@ function QualityControlModal({
                     }}
                   >
                     <span>Ninguna</span>
-                    {form.operacionId === null && <Check size={14} className={styles.checkIcon} />}
+                    {form.operacionId === null && (
+                      <Check size={14} className={styles.checkIcon} />
+                    )}
                   </button>
 
                   {dbOperations.map((op) => (
@@ -243,7 +260,9 @@ function QualityControlModal({
                       key={op.id}
                       type="button"
                       className={`${styles.customDropdownOption} ${
-                        form.operacionId === op.id ? styles.customDropdownOptionSelected : ""
+                        form.operacionId === op.id
+                          ? styles.customDropdownOptionSelected
+                          : ""
                       }`}
                       onClick={() => {
                         setForm({
@@ -271,7 +290,9 @@ function QualityControlModal({
                 placeholder="Nombre del inspector"
                 className={styles.formInput}
                 value={form.inspector}
-                onChange={(e) => setForm({ ...form, inspector: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, inspector: e.target.value })
+                }
               />
             </div>
           </div>
@@ -295,7 +316,9 @@ function QualityControlModal({
                 placeholder="Ej. ±0.05 mm"
                 className={styles.formInput}
                 value={form.tolerancia}
-                onChange={(e) => setForm({ ...form, tolerancia: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, tolerancia: e.target.value })
+                }
               />
             </div>
           </div>
@@ -307,7 +330,9 @@ function QualityControlModal({
               placeholder="Desviaciones observadas, condiciones o notas..."
               className={styles.formTextarea}
               value={form.observaciones}
-              onChange={(e) => setForm({ ...form, observaciones: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, observaciones: e.target.value })
+              }
             />
           </div>
 
@@ -322,7 +347,11 @@ function QualityControlModal({
           </div>
 
           <div className={styles.modalFooter}>
-            <button type="button" className={styles.btnCancel} onClick={onClose}>
+            <button
+              type="button"
+              className={styles.btnCancel}
+              onClick={onClose}
+            >
               Cancelar
             </button>
             <button type="submit" className={styles.btnSave}>
@@ -337,7 +366,9 @@ function QualityControlModal({
 
 export default function QualityTab({ otId, ot }) {
   const { id } = useParams();
-  const currentOtId = id || otId || ot?.id_ot || ot?.id;
+
+  // Priorizamos siempre el id numérico proveniente de las props del objeto ot
+  const currentOtId = ot?.id_ot || ot?.id || otId || id;
 
   const [controls, setControls] = useState([]);
   const [dbOperations, setDbOperations] = useState([]);
@@ -390,7 +421,7 @@ export default function QualityTab({ otId, ot }) {
               observaciones: c.observaciones,
               fecha: formatDateDisplay(c.fecha),
               inspector: c.inspector || "Inspector de Calidad",
-            }))
+            })),
           );
           return;
         }
@@ -519,7 +550,8 @@ export default function QualityTab({ otId, ot }) {
           </div>
           <h4 className={styles.emptyTitle}>Sin controles de calidad</h4>
           <p className={styles.emptySubtitle}>
-            Registra inspecciones dimensionales, superficiales y finales de la pieza.
+            Registra inspecciones dimensionales, superficiales y finales de la
+            pieza.
           </p>
         </div>
       ) : (
@@ -545,13 +577,17 @@ export default function QualityTab({ otId, ot }) {
                   {item.medicion && (
                     <span className={styles.metricItem}>
                       <span className={styles.metricLabel}>Medición:</span>
-                      <span className={styles.metricValue}>{item.medicion}</span>
+                      <span className={styles.metricValue}>
+                        {item.medicion}
+                      </span>
                     </span>
                   )}
                   {item.tolerancia && (
                     <span className={styles.metricItem}>
                       <span className={styles.metricLabel}>Tolerancia:</span>
-                      <span className={styles.metricValue}>{item.tolerancia}</span>
+                      <span className={styles.metricValue}>
+                        {item.tolerancia}
+                      </span>
                     </span>
                   )}
                 </div>

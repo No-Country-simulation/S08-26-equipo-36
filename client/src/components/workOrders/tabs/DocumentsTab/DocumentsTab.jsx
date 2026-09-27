@@ -259,8 +259,16 @@ function DocumentUploadModal({ isOpen, onClose, onUpload }) {
 }
 
 export default function DocumentsTab({ otId, ot }) {
-  const { id } = useParams();
-  const currentOtId = id || otId || ot?.id_ot || ot?.id;
+  const params = useParams();
+
+  // Oñembotenonde tapiaite pe ID papapy (ot?.id_ot térã ot?.id) ani hag̃ua Flask ome'ẽ 404
+  const currentOtId =
+    ot?.id_ot ||
+    ot?.id ||
+    otId ||
+    params.id ||
+    params.idOt ||
+    params.numero;
 
   const [documents, setDocuments] = useState([]);
   const [toDelete, setToDelete] = useState(null);

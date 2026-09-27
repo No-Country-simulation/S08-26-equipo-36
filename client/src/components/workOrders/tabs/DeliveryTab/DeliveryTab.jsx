@@ -231,10 +231,12 @@ function DeliveryModal({
 
 export default function DeliveryTab({ otId, ot }) {
   const params = useParams();
+  
+  // Priorizar siempre el ID numérico técnico de la OT para evitar el 404 de Flask
   const currentOtId =
-    otId ||
     ot?.id_ot ||
     ot?.id ||
+    otId ||
     params.id ||
     params.idOt ||
     params.numero;
@@ -453,7 +455,6 @@ export default function DeliveryTab({ otId, ot }) {
         </div>
       )}
 
-      {/* Modal Crear / Editar montado con key */}
       <DeliveryModal
         key={editingDelivery ? editingDelivery.id : "create-delivery"}
         isOpen={isModalOpen}

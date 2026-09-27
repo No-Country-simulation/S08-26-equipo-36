@@ -339,10 +339,12 @@ function NonConformityModal({
 
 export default function NonConformitiesTab({ otId, ot }) {
   const params = useParams();
+
+  // Priorizamos siempre el id numérico del objeto ot para blindar contra el 404 del backend
   const currentOtId =
-    otId ||
     ot?.id_ot ||
     ot?.id ||
+    otId ||
     params.id ||
     params.idOt ||
     params.numero;

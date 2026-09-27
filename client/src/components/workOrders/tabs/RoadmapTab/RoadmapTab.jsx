@@ -304,7 +304,7 @@ export default function RoadmapTab({
   onDeleteOperation,
 }) {
   const { id } = useParams();
-  const currentOtId = id || otId || ot?.id_ot || ot?.id;
+const currentOtId = ot?.id_ot || ot?.id || otId || id;
 
   const [opsList, setOpsList] = useState(initialOperations);
   const [openMenuId, setOpenMenuId] = useState(null);
