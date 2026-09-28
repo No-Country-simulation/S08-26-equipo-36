@@ -270,3 +270,9 @@
     transform: rotate(360deg);
   }
 }
+
+.logoWhatsapp{
+  width: 15px;
+  height: 15px;
+  fill: #25d366
+}

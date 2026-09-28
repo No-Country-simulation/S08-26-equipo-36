@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Mail, Send, X, Loader2, Check } from "lucide-react";
+import { Mail, Send, X, Check } from "lucide-react";
+import Spinner from "../../common/Spinner/Spinner";
 import styles from "./ReplyInquiryModal.module.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
@@ -147,15 +148,18 @@ function ReplyInquiryContent({ onClose, inquiry, onEmailSent }) {
             >
               {sending ? (
                 <>
-                  <Loader2 size={15} className={styles.spin} /> Enviando...
+                  <Spinner size="sm" isButton />
+                  <span>Enviando...</span>
                 </>
               ) : sentSuccess ? (
                 <>
-                  <Check size={15} color="#10b981" /> ¡Enviado!
+                  <Check size={15} color="#10b981" />
+                  <span>¡Enviado!</span>
                 </>
               ) : (
                 <>
-                  <Send size={15} /> Enviar Respuesta
+                  <Send size={15} />
+                  <span>Enviar Respuesta</span>
                 </>
               )}
             </button>

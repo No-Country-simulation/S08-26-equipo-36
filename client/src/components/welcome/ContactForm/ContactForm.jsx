@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Send, CheckCircle2, RefreshCw } from "lucide-react";
+import Spinner from "../../common/Spinner/Spinner";
 import styles from "./ContactForm.module.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -217,8 +218,17 @@ export default function ContactForm() {
                   disabled={loading}
                   className={styles.btnPrimary}
                 >
-                  {loading ? "Enviando consulta..." : "Enviar Consulta"}
-                  <Send size={16} className={styles.sendIcon} />
+                  {loading ? (
+                    <>
+                      <Spinner size="sm" isButton />
+                      <span>Enviando consulta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Enviar Consulta</span>
+                      <Send size={16} className={styles.sendIcon} />
+                    </>
+                  )}
                 </button>
               </div>
             </form>
