@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
@@ -9,7 +9,7 @@ import styles from "./Register.module.css";
 
 export default function Register() {
   const navigate = useNavigate();
-  const { signUp, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signUp, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +20,13 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Redirigir automáticamente si ya existe una sesión activa (ej. retorno de Google OAuth)
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate("/", { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +47,6 @@ export default function Register() {
     try {
       await signUp(email.trim(), password);
       setLoading(false);
-      // Redirección directa al login
       navigate("/login");
     } catch (err) {
       setLoading(false);
@@ -63,6 +69,17 @@ export default function Register() {
     }
   };
 
+  // Si se está verificando la sesión inicial de Supabase y el usuario ya está autenticado, evitamos el parpadeo del form
+  if (authLoading && !loading && !googleLoading) {
+    return (
+      <AuthLayout icon={UserPlus} title="Cargando..." subtitle="Verificando sesión">
+        <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+          <Spinner size="lg" color="orange" />
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       icon={UserPlus}
@@ -84,7 +101,7 @@ export default function Register() {
         disabled={loading || googleLoading}
       >
         {googleLoading ? (
-          <Spinner size="sm" isButton />
+          <Spinner size="sm" isButton color="orange" />
         ) : (
           <GoogleIcon size={18} />
         )}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { LogIn, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Spinner from "../../components/common/Spinner/Spinner";
@@ -10,7 +10,7 @@ import styles from "./Login.module.css";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +21,13 @@ export default function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const returnTo = new URLSearchParams(location.search).get("returnTo") || "/";
+
+  // Redirigir automáticamente si ya existe una sesión activa (ej. regreso de OAuth)
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate(returnTo, { replace: true });
+    }
+  }, [user, authLoading, navigate, returnTo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,6 +64,17 @@ export default function Login() {
       setGoogleLoading(false);
     }
   };
+
+  // Si aún está verificando la sesión inicial de Supabase y ya viene logueado, evitamos parpadeos
+  if (authLoading && !loading && !googleLoading) {
+    return (
+      <AuthLayout icon={LogIn} title="Cargando..." subtitle="Verificando sesión">
+        <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
+          <Spinner size="lg" color="orange" />
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout
