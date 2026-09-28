@@ -10,9 +10,10 @@ import {
   XCircle,
   Trash2,
 } from "lucide-react";
-import styles from "./Inquiries.module.css";
 import ReplyInquiryModal from "../../components/inquiries/ReplyInquiryModal/ReplyInquiryModal";
 import ConfirmDialog from "../../components/common/ConfirmDialog/ConfirmDialog";
+import Spinner from "../../components/common/Spinner/Spinner";
+import styles from "./Inquiries.module.css";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
@@ -330,6 +331,11 @@ export default function Inquiries() {
 
   const currentEmptyState = EMPTY_STATE_CONFIG[filter] || EMPTY_STATE_CONFIG.all;
 
+  // Retorno temprano unificado con Brand Spinner
+  if (loading) {
+    return <Spinner fullScreen text="Cargando consultas..." />;
+  }
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -360,11 +366,7 @@ export default function Inquiries() {
 
       {/* Card Principal */}
       <div className={styles.tableCard}>
-        {loading ? (
-          <div className={styles.emptyState}>
-            <p className={styles.emptySubtitle}>Cargando consultas...</p>
-          </div>
-        ) : filteredInquiries.length === 0 ? (
+        {filteredInquiries.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIconWrapper}>
               <Inbox size={22} strokeWidth={1.75} />
@@ -483,7 +485,7 @@ export default function Inquiries() {
                               <Mail size={15} />
                             </button>
 
-                            {/* Botón de WhatsApp con número directo y formateado */}
+                            {/* Botón de WhatsApp */}
                             {wsUrl ? (
                               <a
                                 href={wsUrl}

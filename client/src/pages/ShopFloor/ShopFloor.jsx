@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   X,
   Inbox,
+  RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import Spinner from '../../components/common/Spinner/Spinner';
 import ShopFloorCard from '../../components/shopFloor/ShopFloorCard/ShopFloorCard';
@@ -27,6 +29,7 @@ const INITIAL_INCIDENT_FORM = {
   title: '',
   description: '',
   reporter: '',
+  severity: 'moderada', // 'moderada' (Retrabajo) | 'critica' (Scrap)
 };
 
 export default function ShopFloor() {
@@ -44,13 +47,13 @@ export default function ShopFloor() {
   const [blueprintDocs, setBlueprintDocs] = useState([]);
   const [qcModalOpen, setQcModalOpen] = useState(false);
 
-  // Diálogo de Falla Crítica
+  // Diálogo de Reporte de Falla / Desvío
   const [incidentOrder, setIncidentOrder] = useState(null);
   const [incidentForm, setIncidentForm] = useState(INITIAL_INCIDENT_FORM);
 
   useEffect(() => {
     let active = true;
-    const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 300));
 
     Promise.all([api.getOrdenes(), minDelay])
       .then(([res]) => {
@@ -59,8 +62,8 @@ export default function ShopFloor() {
           const activas = res.data
             .map((o) => ({
               ...o,
-              id: o.id_ot,
-              estado: o.estado_actual,
+              id: o.id_ot || o.id,
+              estado: o.estado_actual || o.estado,
             }))
             .filter((o) => ACTIVE_STATUSES.includes((o.estado || '').toLowerCase()));
           setOrders(activas);
@@ -78,21 +81,48 @@ export default function ShopFloor() {
     };
   }, []);
 
+  // Cargar operaciones vinculadas
+  const loadOrderOperations = async (otKey) => {
+    let loadedOps = [];
+    try {
+      if (typeof api.getOperacionesOrden === 'function') {
+        const res = await api.getOperacionesOrden(otKey);
+        if (res?.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+          loadedOps = res.data.map((item, index) => ({
+            id: item.id_operacion || item.id,
+            step: item.secuencia || (index + 1) * 10,
+            name: item.descripcion_tarea || item.nombre || 'Operación',
+            type: item.tipo || 'Torneado',
+            operator: item.operario_asignado || item.operario || '—',
+            machine: item.maquina || 'Taller General',
+            status: (item.estado || 'pendiente').toLowerCase(),
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('[ShopFloor] Fallback a local storage para operaciones:', e);
+    }
+
+    if (loadedOps.length === 0) {
+      const storedOps = localStorage.getItem(`qt_ops_${otKey}`);
+      if (storedOps) {
+        try {
+          loadedOps = JSON.parse(storedOps);
+        } catch {
+          loadedOps = [];
+        }
+      }
+    }
+    return loadedOps;
+  };
+
   // Abrir vista detalle de tableta
-  const handleOpenOrder = (order) => {
+  const handleOpenOrder = async (order) => {
     setSelectedOrder(order);
     const otKey = order.id || order.id_ot;
 
-    const storedOps = localStorage.getItem(`qt_ops_${otKey}`);
-    if (storedOps) {
-      try {
-        setOperations(JSON.parse(storedOps));
-      } catch {
-        setOperations([]);
-      }
-    } else {
-      setOperations([]);
-    }
+    const loadedOps = await loadOrderOperations(otKey);
+    setOperations(loadedOps);
 
     const storedDocs = localStorage.getItem(`qt_docs_${otKey}`);
     if (storedDocs) {
@@ -107,16 +137,23 @@ export default function ShopFloor() {
   };
 
   // Alternar completado de operación en la hoja de ruta
-  const handleToggleOperation = (op) => {
+  const handleToggleOperation = async (op) => {
     const nextStatus = op.status === 'completada' ? 'pendiente' : 'completada';
     const updated = operations.map((o) =>
       o.id === op.id ? { ...o, status: nextStatus } : o
     );
     setOperations(updated);
-    localStorage.setItem(
-      `qt_ops_${selectedOrder.id || selectedOrder.id_ot}`,
-      JSON.stringify(updated)
-    );
+
+    const otKey = selectedOrder.id || selectedOrder.id_ot;
+    localStorage.setItem(`qt_ops_${otKey}`, JSON.stringify(updated));
+
+    try {
+      if (typeof api.actualizarEstadoOperacion === 'function') {
+        await api.actualizarEstadoOperacion(op.id, nextStatus);
+      }
+    } catch (err) {
+      console.warn('[ShopFloor] Error persistiendo estado de operación:', err);
+    }
   };
 
   // Escalar OT a Control de Calidad
@@ -173,20 +210,21 @@ export default function ShopFloor() {
             }
           }
         } catch (e) {
-          console.error('[ShopFloor] Error leyendo documentos cacheados:', e);
+          console.error('[ShopFloor] Error leyendo documentos:', e);
         }
       }
     }
     setBlueprintDocs(foundDocs);
   };
 
-  // Reportar desvío crítico (No Conformidad)
+  // Abrir modal de incidente
   const handleOpenIncident = (order) => {
     setIncidentOrder(order);
     setIncidentForm({
       title: '',
       description: '',
       reporter: order.responsable || '',
+      severity: 'moderada', // Moderada (Retrabajo) por defecto
     });
   };
 
@@ -195,22 +233,28 @@ export default function ShopFloor() {
     setIncidentForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Guardar No Conformidad con bifurcación de Retrabajo o Scrap
   const handleSaveIncident = async (e) => {
     e.preventDefault();
     if (!incidentForm.title.trim() || !incidentOrder) return;
 
     const otId = incidentOrder.id || incidentOrder.id_ot;
     const cleanReporter = incidentForm.reporter.trim() || incidentOrder.responsable || 'Operario de Planta';
+    const isCritical = incidentForm.severity === 'critica';
 
     try {
-      await api.crearNoConformidadOrden(otId, {
-        title: incidentForm.title.trim(),
-        description: incidentForm.description.trim(),
-        reporter: cleanReporter,
-        severity: 'critica',
-        origin: 'Producción / Taller',
-      });
+      // 1. Crear NC en Backend
+      if (typeof api.crearNoConformidadOrden === 'function') {
+        await api.crearNoConformidadOrden(otId, {
+          title: incidentForm.title.trim(),
+          description: incidentForm.description.trim(),
+          reporter: cleanReporter,
+          severity: incidentForm.severity,
+          origin: 'Producción / Taller',
+        });
+      }
 
+      // Guardar en LocalStorage para redundancia
       const storageKey = `qt_nc_${otId}`;
       const stored = localStorage.getItem(storageKey);
       let ncList = [];
@@ -226,19 +270,83 @@ export default function ShopFloor() {
         id: `nc-${Date.now()}`,
         title: incidentForm.title.trim(),
         description: incidentForm.description.trim(),
-        severity: 'critica',
+        severity: incidentForm.severity,
         status: 'abierta',
         origin: 'Producción / Taller',
         reporter: cleanReporter,
         correctiveAction: null,
         date: new Date().toLocaleDateString('es-AR'),
       };
-
       localStorage.setItem(storageKey, JSON.stringify([newNc, ...ncList]));
+
+      // 2. BIFURCACIÓN DE ACCIÓN OPERATIVA
+      if (isCritical) {
+        // === RUTA SCRAP ===
+        if (typeof api.actualizarEstadoOrden === 'function') {
+          await api.actualizarEstadoOrden(otId, 'cancelada');
+        }
+        // Remover de la grilla de órdenes activas de taller
+        setOrders((prev) => prev.filter((o) => o.id !== otId));
+        if (selectedOrder && (selectedOrder.id === otId || selectedOrder.id_ot === otId)) {
+          setSelectedOrder(null);
+        }
+      } else {
+        // === RUTA RETRABAJO (MODERADA) ===
+        // 1. Forzar/asegurar que la OT permanezca en Mecanizado
+        if (typeof api.actualizarEstadoOrden === 'function') {
+          await api.actualizarEstadoOrden(otId, 'en_proceso');
+        }
+
+        // 2. Cargar operaciones existentes y calcular nuevo paso
+        const currentOps = await loadOrderOperations(otId);
+        const lastStep = currentOps.reduce((max, op) => Math.max(max, op.step || 0), 0);
+        const nextStep = lastStep > 0 ? lastStep + 10 : 10;
+
+        const reworkOp = {
+          id: `op-rework-${Date.now()}`,
+          step: nextStep,
+          name: `[Retrabajo] ${incidentForm.title.trim()}`,
+          type: 'Ajuste / Retrabajo',
+          operator: cleanReporter,
+          machine: 'Taller de Mecanizado',
+          status: 'pendiente',
+        };
+
+        const updatedOps = [...currentOps, reworkOp];
+        localStorage.setItem(`qt_ops_${otId}`, JSON.stringify(updatedOps));
+
+        // Persistir en backend si la API soporta creación directa
+        try {
+          if (typeof api.crearOperacionOrden === 'function') {
+            await api.crearOperacionOrden(otId, {
+              secuencia: nextStep,
+              descripcion_tarea: reworkOp.name,
+              tipo: reworkOp.type,
+              operario_asignado: cleanReporter,
+              maquina: reworkOp.machine,
+              estado: 'pendiente',
+            });
+          }
+        } catch (opErr) {
+          console.warn('[ShopFloor] No se pudo persistir la op en API, queda en storage:', opErr);
+        }
+
+        // Si estamos dentro del detalle de esa misma OT, actualizar en pantalla
+        if (selectedOrder && (selectedOrder.id === otId || selectedOrder.id_ot === otId)) {
+          setOperations(updatedOps);
+          setSelectedOrder((prev) => ({ ...prev, estado: 'en_proceso' }));
+        }
+
+        // Actualizar estado en el listado principal
+        setOrders((prev) =>
+          prev.map((o) => (o.id === otId ? { ...o, estado: 'en_proceso' } : o))
+        );
+      }
+
       setIncidentOrder(null);
       setIncidentForm(INITIAL_INCIDENT_FORM);
     } catch (err) {
-      console.error('[ShopFloor] Error al guardar no conformidad:', err);
+      console.error('[ShopFloor] Error al registrar incidente:', err);
     }
   };
 
@@ -248,13 +356,15 @@ export default function ShopFloor() {
     const otId = selectedOrder.id || selectedOrder.id_ot;
 
     try {
-      await api.crearControlOrden(otId, {
-        tipo: form.type,
-        resultado: form.result,
-        medicion: form.measurement.trim() || null,
-        inspector: form.inspector.trim() || 'Inspector Taller',
-        observaciones: form.notes.trim() || null,
-      });
+      if (typeof api.crearControlOrden === 'function') {
+        await api.crearControlOrden(otId, {
+          tipo: form.type,
+          resultado: form.result,
+          medicion: form.measurement.trim() || null,
+          inspector: form.inspector.trim() || 'Inspector Taller',
+          observaciones: form.notes.trim() || null,
+        });
+      }
 
       const key = `qt_quality_${otId}`;
       const stored = localStorage.getItem(key);
@@ -405,6 +515,14 @@ export default function ShopFloor() {
             >
               <FileText size={18} /> Ver Planos ({documents.length})
             </button>
+            <button
+              type="button"
+              onClick={() => handleOpenIncident(selectedOrder)}
+              className={styles.btnModalCancel}
+              style={{ borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' }}
+            >
+              <AlertTriangle size={16} /> Reportar Desvío
+            </button>
           </div>
 
           <div className={styles.opsList}>
@@ -415,12 +533,32 @@ export default function ShopFloor() {
             ) : (
               operations.map((op, idx) => {
                 const isDone = op.status === 'completada';
+                const isRework = (op.name || '').includes('[Retrabajo]');
+
                 return (
-                  <div key={op.id || idx} className={styles.opCard}>
+                  <div
+                    key={op.id || idx}
+                    className={styles.opCard}
+                    style={isRework ? { borderLeft: '3px solid #f59e0b' } : {}}
+                  >
                     <div className={styles.opLeft}>
                       <div className={styles.opStepNum}>{op.step || (idx + 1) * 10}</div>
                       <div>
-                        <p className={styles.opTitle}>{op.name}</p>
+                        <p className={styles.opTitle}>
+                          {isRework && (
+                            <span
+                              style={{
+                                color: '#f59e0b',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                marginRight: '6px',
+                              }}
+                            >
+                              [RETRABAJO]
+                            </span>
+                          )}
+                          {op.name.replace('[Retrabajo] ', '')}
+                        </p>
                         <p className={styles.opMeta}>
                           {op.operator || '—'} · {op.machine || 'Taller'}
                         </p>
@@ -523,6 +661,7 @@ export default function ShopFloor() {
         )}
       </main>
 
+      {/* Modal de Reporte de Desvío / Incidente */}
       {incidentOrder && (
         <div
           className={styles.modalOverlay}
@@ -533,7 +672,7 @@ export default function ShopFloor() {
           <div className={styles.modalBox} onClick={(e) => e.stopPropagation()}>
             <header className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>
-                <AlertTriangle size={18} /> Reportar Falla Crítica
+                <AlertTriangle size={18} /> Reportar Desvío en Taller
               </h3>
               <button
                 type="button"
@@ -546,20 +685,91 @@ export default function ShopFloor() {
             </header>
 
             <form onSubmit={handleSaveIncident} className={styles.modalForm}>
-              <div className={styles.dangerAlertBanner}>
-                Se registrará una no conformidad <strong>crítica</strong> para {incidentOrder.numero}.
+              {/* Selector de Severidad / Tipo de Impacto */}
+              <div className={styles.formField}>
+                <label className={styles.formLabel}>Tipo de impacto operacional *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIncidentForm((prev) => ({ ...prev, severity: 'moderada' }))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      border: incidentForm.severity === 'moderada' ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.1)',
+                      background: incidentForm.severity === 'moderada' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: incidentForm.severity === 'moderada' ? '#fbbf24' : '#94a3b8',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <RotateCcw size={16} /> Retrabajo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIncidentForm((prev) => ({ ...prev, severity: 'critica' }))}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      border: incidentForm.severity === 'critica' ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)',
+                      background: incidentForm.severity === 'critica' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: incidentForm.severity === 'critica' ? '#f87171' : '#94a3b8',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <Trash2 size={16} /> Scrap (Chatarra)
+                  </button>
+                </div>
               </div>
+
+              {/* Banner contextual explicativo */}
+              {incidentForm.severity === 'critica' ? (
+                <div className={styles.dangerAlertBanner}>
+                  La pieza no tiene recuperación. La OT <strong>{incidentOrder.numero}</strong> pasará a <strong>Cancelada</strong> y saldrá de la línea de producción.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    color: '#fbbf24',
+                    fontSize: '0.82rem',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  Se mantendrá la OT en <strong>Mecanizado</strong> e insertará automáticamente una operación adicional de <strong>[Retrabajo]</strong> en la Hoja de Ruta.
+                </div>
+              )}
 
               <div className={styles.formField}>
                 <label htmlFor="inc-title" className={styles.formLabel}>
-                  Título del desvío *
+                  {incidentForm.severity === 'critica' ? 'Motivo de descarte *' : 'Tarea de retrabajo requerida *'}
                 </label>
                 <input
                   id="inc-title"
                   type="text"
                   name="title"
                   required
-                  placeholder="Ej. Dimensión fuera de tolerancia"
+                  placeholder={
+                    incidentForm.severity === 'critica'
+                      ? 'Ej. Rotura irrecuperable de herramienta / núcleo dañado'
+                      : 'Ej. Repasado en torno / desbaste adicional 0.5mm'
+                  }
                   className={styles.input}
                   value={incidentForm.title}
                   onChange={handleIncidentChange}
@@ -568,7 +778,7 @@ export default function ShopFloor() {
 
               <div className={styles.formField}>
                 <label htmlFor="inc-desc" className={styles.formLabel}>
-                  Descripción
+                  Detalle técnico del desvío
                 </label>
                 <textarea
                   id="inc-desc"
@@ -583,7 +793,7 @@ export default function ShopFloor() {
 
               <div className={styles.formField}>
                 <label htmlFor="inc-rep" className={styles.formLabel}>
-                  Reportado por
+                  Operario que reporta
                 </label>
                 <input
                   id="inc-rep"
@@ -604,8 +814,15 @@ export default function ShopFloor() {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className={styles.btnModalSaveDanger}>
-                  Reportar falla
+                <button
+                  type="submit"
+                  className={
+                    incidentForm.severity === 'critica'
+                      ? styles.btnModalSaveDanger
+                      : styles.btnTabletQc
+                  }
+                >
+                  {incidentForm.severity === 'critica' ? 'Confirmar Scrap' : 'Generar Retrabajo'}
                 </button>
               </footer>
             </form>
