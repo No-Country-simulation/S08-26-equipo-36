@@ -7,9 +7,7 @@ import {
   User,
   Package,
   Calendar,
-  Settings2,
   Wrench,
-  ChevronDown,
   Check,
   ClipboardList,
   FileText,
@@ -81,33 +79,35 @@ export default function WorkOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [ot, setOt] = useState(null);
   const [operations, setOperations] = useState([]);
+  const [qualityControls, setQualityControls] = useState([]);
+  const [nonConformities, setNonConformities] = useState([]);
   const [activeTab, setActiveTab] = useState("hoja-de-ruta");
 
-  const [isOtStatusMenuOpen, setIsOtStatusMenuOpen] = useState(false);
-  const [isFlashing, setIsFlashing] = useState(false);
+  // const [isOtStatusMenuOpen, setIsOtStatusMenuOpen] = useState(false);
+  // const [isFlashing, setIsFlashing] = useState(false);
 
   // Edición inline del Responsable
   const [isEditingResp, setIsEditingResp] = useState(false);
   const [respValue, setRespValue] = useState("");
   const [savingResp, setSavingResp] = useState(false);
 
-  const otMenuRef = useRef(null);
+  // const otMenuRef = useRef(null);
 
+  // Carga inicial y datos vinculados
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchOtDetail() {
+    const fetchOtDetail = async () => {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 400));
-
-        // 1. Buscamos el detalle de la OT (soporta tanto 'OT-0004' como 7)
+        const minDelay = new Promise((resolve) => setTimeout(resolve, 300));
         const [res] = await Promise.all([api.getDetalleOrden(id), minDelay]);
 
         if (!isMounted) return;
 
         if (res?.status === "success" && res.data) {
           const dbData = res.data;
-          const realId = dbData.id_ot || dbData.id;
+          const rawId = dbData.id_ot || dbData.id;
+          const realId = !isNaN(Number(rawId)) ? Number(rawId) : rawId;
 
           setOt({
             ...dbData,
@@ -116,11 +116,15 @@ export default function WorkOrderDetails() {
           });
           setRespValue(dbData.responsable || "");
 
-          // 2. Traemos las operaciones usando SIEMPRE el ID numérico técnico
+          // 1. Cargar Operaciones
           try {
             if (typeof api.getOperacionesOrden === "function") {
               const opsRes = await api.getOperacionesOrden(realId);
-              if (opsRes?.status === "success" && Array.isArray(opsRes.data)) {
+              if (
+                isMounted &&
+                opsRes?.status === "success" &&
+                Array.isArray(opsRes.data)
+              ) {
                 const mappedOps = opsRes.data.map((item, index) => ({
                   id: item.id_operacion || item.id,
                   step: item.secuencia || (index + 1) * 10,
@@ -137,30 +141,67 @@ export default function WorkOrderDetails() {
                   realTime: item.tiempo_real || 0,
                 }));
                 setOperations(mappedOps);
-                return;
               }
             }
           } catch (opErr) {
             console.warn(
-              "[WorkOrderDetails] Error al cargar operaciones por API:",
+              "[WorkOrderDetails] Fallback localStorage operaciones:",
               opErr,
+            );
+            if (isMounted) {
+              const storageKey = `qt_ops_${realId}`;
+              const storedOps = localStorage.getItem(storageKey);
+              setOperations(storedOps ? JSON.parse(storedOps) : []);
+            }
+          }
+
+          // 2. Cargar Controles de Calidad
+          try {
+            if (typeof api.getControlesOrden === "function") {
+              const qcRes = await api.getControlesOrden(realId);
+              if (
+                isMounted &&
+                qcRes?.status === "success" &&
+                Array.isArray(qcRes.data)
+              ) {
+                setQualityControls(qcRes.data);
+              }
+            }
+          } catch (qcErr) {
+            console.warn(
+              "[WorkOrderDetails] Error al sincronizar controles:",
+              qcErr,
             );
           }
 
-          // Fallback a localStorage si fallara la API de operaciones
-          const storageKey = `qt_ops_${realId}`;
-          const storedOps = localStorage.getItem(storageKey);
-          setOperations(storedOps ? JSON.parse(storedOps) : []);
+          // 3. Cargar No Conformidades
+          try {
+            if (typeof api.getNoConformidadesOrden === "function") {
+              const ncRes = await api.getNoConformidadesOrden(realId);
+              if (
+                isMounted &&
+                ncRes?.status === "success" &&
+                Array.isArray(ncRes.data)
+              ) {
+                setNonConformities(ncRes.data);
+              }
+            }
+          } catch (ncErr) {
+            console.warn(
+              "[WorkOrderDetails] Error al sincronizar no conformidades:",
+              ncErr,
+            );
+          }
         } else {
           setOt(null);
         }
       } catch (err) {
         console.error("[WorkOrderDetails] Error al cargar la OT:", err);
-        setOt(null);
+        if (isMounted) setOt(null);
       } finally {
         if (isMounted) setLoading(false);
       }
-    }
+    };
 
     fetchOtDetail();
 
@@ -169,21 +210,45 @@ export default function WorkOrderDetails() {
     };
   }, [id]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (otMenuRef.current && !otMenuRef.current.contains(e.target)) {
-        setIsOtStatusMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // useEffect(() => {
+  //   const handleClickOutside = (e) => {
+  //     if (otMenuRef.current && !otMenuRef.current.contains(e.target)) {
+  //       setIsOtStatusMenuOpen(false);
+  //     }
+  //   };
+  //   document.addEventListener("mousedown", handleClickOutside);
+  //   return () => document.removeEventListener("mousedown", handleClickOutside);
+  // }, []);
 
-  // Validación de Gate 1: Requiere operaciones existentes y 100% completadas
+  // --- LÓGICA QUALITY GATE INDUSTRIAL ---
+
   const isMachiningComplete =
     operations.length > 0 &&
-    operations.every((op) => op.status === "completada");
+    operations.every(
+      (op) => (op.status || op.estado || "").toLowerCase() === "completada",
+    );
 
+  const hasReworkQuality = qualityControls.some((c) => {
+    const res = (c.resultado || c.status || "").toLowerCase();
+    return res === "retrabajo";
+  });
+
+  const hasRejectedQuality = qualityControls.some((c) => {
+    const res = (c.resultado || c.status || "").toLowerCase();
+    return res === "rechazado";
+  });
+
+  const hasActiveNc = nonConformities.some((nc) => {
+    const st = (
+      nc.estado_resolucion ||
+      nc.estado ||
+      nc.status ||
+      ""
+    ).toLowerCase();
+    return st === "abierta" || st === "en_analisis";
+  });
+
+  // Cambiar estado con persistencia (estabilizado con useCallback)
   const handleSelectStatus = async (newUiStatus) => {
     const dbStatus = normalizeUiToDbStatus(newUiStatus);
     setOt((prev) => ({
@@ -191,31 +256,16 @@ export default function WorkOrderDetails() {
       estado: newUiStatus,
       estado_actual: dbStatus,
     }));
-    setIsOtStatusMenuOpen(false);
+    // setIsOtStatusMenuOpen(false);
 
     try {
-      await api.actualizarEstadoOrden(ot.id, dbStatus);
-      setIsFlashing(true);
-      setTimeout(() => setIsFlashing(false), 600);
+      if (typeof api.actualizarEstadoOrden === "function") {
+        await api.actualizarEstadoOrden(ot?.id, dbStatus);
+      }
+      // setIsFlashing(true);
+      // setTimeout(() => setIsFlashing(false), 600);
     } catch (err) {
-      console.error(
-        "[WorkOrderDetails] Error al actualizar estado en la base de datos:",
-        err,
-      );
-    }
-  };
-
-  const handleSaveResponsable = async () => {
-    try {
-      setSavingResp(true);
-      const cleanVal = respValue.trim();
-      await api.actualizarResponsableOrden(ot.id, cleanVal);
-      setOt((prev) => ({ ...prev, responsable: cleanVal }));
-      setIsEditingResp(false);
-    } catch (err) {
-      console.error("[WorkOrderDetails] Error al actualizar responsable:", err);
-    } finally {
-      setSavingResp(false);
+      console.error("[WorkOrderDetails] Error al actualizar estado:", err);
     }
   };
 
@@ -262,6 +312,143 @@ export default function WorkOrderDetails() {
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const handleQualityChange = async (updatedControls) => {
+    setQualityControls(updatedControls);
+
+    const anyRework = updatedControls.some((c) => {
+      const r = (c.resultado || c.status || "").toLowerCase();
+      return r === "retrabajo";
+    });
+    const anyRejected = updatedControls.some((c) => {
+      const r = (c.resultado || c.status || "").toLowerCase();
+      return r === "rechazado";
+    });
+    const allApproved =
+      updatedControls.length > 0 &&
+      updatedControls.every((c) => {
+        const r = (c.resultado || c.status || "").toLowerCase();
+        return r === "aprobado";
+      });
+
+    if (anyRework) {
+      await handleSelectStatus("mecanizado");
+      setOperations((prev) => {
+        if (prev.length === 0) return prev;
+        const lastOp = prev[prev.length - 1];
+        const updated = prev.map((o) =>
+          o.id === lastOp.id ? { ...o, status: "pendiente" } : o,
+        );
+        localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
+        return updated;
+      });
+      setActiveTab("hoja-de-ruta");
+    } else if (anyRejected) {
+      await handleSelectStatus("cancelada");
+    } else if (allApproved && !hasActiveNc) {
+      await handleSelectStatus("liberada");
+    }
+  };
+
+  const handleNcChange = (updatedNcs) => {
+    setNonConformities(updatedNcs);
+  };
+
+  const isCreatingReworkRef = useRef(false);
+
+  const handleNcReworkTrigger = async ({
+    severity,
+    title,
+    correctiveAction,
+    status,
+  }) => {
+    if (severity === "critica") {
+      await handleSelectStatus("cancelada");
+      return;
+    }
+    if (status === "cerrada" || status === "corregida") return;
+    if (severity === "moderada") {
+      // Evitar ejecuciones simultáneas o duplicadas por StrictMode
+      if (isCreatingReworkRef.current) return;
+      isCreatingReworkRef.current = true;
+      setTimeout(() => {
+        isCreatingReworkRef.current = false;
+      }, 1000);
+
+      const taskDescription = `[Retrabajo] ${correctiveAction || title}`;
+
+      // Evitar crear si ya existe una operación pendiente con la misma tarea
+      const alreadyExists = operations.some(
+        (op) =>
+          (op.name === taskDescription ||
+            op.descripcion_tarea === taskDescription) &&
+          op.status === "pendiente",
+      );
+      if (alreadyExists) {
+        await handleSelectStatus("mecanizado");
+        setActiveTab("hoja-de-ruta");
+        return;
+      }
+
+      const maxStep = operations.reduce(
+        (max, op) => Math.max(max, op.step || 0),
+        0,
+      );
+      const nextStep = maxStep > 0 ? maxStep + 10 : 10;
+
+      const newOpPayload = {
+        secuencia: nextStep,
+        descripcion_tarea: taskDescription,
+        tipo: "Ajuste / Retrabajo",
+        operario_asignado: ot?.responsable || "Taller Mecanizado",
+        maquina: "Taller General",
+        tiempo_estimado: 30,
+        estado: "pendiente",
+      };
+
+      if (typeof api.crearOperacionOrden === "function" && ot?.id) {
+        api
+          .crearOperacionOrden(ot.id, newOpPayload)
+          .catch((err) =>
+            console.warn("[WorkOrderDetails] Fallback backend retrabajo:", err),
+          );
+      }
+
+      const newOpObj = {
+        id: Date.now(),
+        step: nextStep,
+        name: newOpPayload.descripcion_tarea,
+        type: newOpPayload.tipo,
+        operator: newOpPayload.operario_asignado,
+        time: `${newOpPayload.tiempo_estimado} min`,
+        machine: newOpPayload.maquina,
+        status: "pendiente",
+      };
+
+      setOperations((prev) => {
+        const updated = [...prev, newOpObj];
+        localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
+        return updated;
+      });
+
+      await handleSelectStatus("mecanizado");
+      setActiveTab("hoja-de-ruta");
+    }
+  };
+
+  const handleSaveResponsable = async () => {
+    try {
+      setSavingResp(true);
+      const cleanVal = respValue.trim();
+      await api.actualizarResponsableOrden(ot.id, cleanVal);
+      setOt((prev) => ({ ...prev, responsable: cleanVal }));
+      setIsEditingResp(false);
+    } catch (err) {
+      console.error("[WorkOrderDetails] Error al actualizar responsable:", err);
+    } finally {
+      setSavingResp(false);
+    }
   };
 
   if (loading) {
@@ -322,7 +509,7 @@ export default function WorkOrderDetails() {
           </div>
         </div>
 
-        <div className={styles.otStatusWrapper} ref={otMenuRef}>
+        {/* <div className={styles.otStatusWrapper} ref={otMenuRef}>
           <Settings2 size={16} className={styles.settingsIcon} />
           <button
             type="button"
@@ -354,7 +541,7 @@ export default function WorkOrderDetails() {
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       <div className={styles.metaGrid}>
@@ -397,7 +584,7 @@ export default function WorkOrderDetails() {
           </p>
         </div>
 
-        {/* Tarjeta Responsable Editable */}
+        {/* Responsable Editable */}
         <div
           className={`${styles.metaCard} ${!isEditingResp ? styles.metaCardInteractive : ""}`}
           onClick={() => {
@@ -475,15 +662,47 @@ export default function WorkOrderDetails() {
         </div>
       </div>
 
-      {/* Tabs con Quality Gate 1 */}
+      {/* Tabs con Quality Gate Multinivel */}
       <div className={styles.tabsContainer}>
         {TABS_CONFIG.map((tab) => {
           const Icon = tab.icon;
 
-          // Documentación y Hoja de Ruta siempre libres. Control, NC y Entrega se bloquean si la fabricación no concluyó.
-          const isTabBlocked =
-            (tab.id === "calidad" || tab.id === "nc" || tab.id === "entrega") &&
-            !isMachiningComplete;
+          let isTabBlocked = false;
+          let blockTitle = "";
+
+          // Gate 1: Calidad y NC se bloquean si la fabricación no concluyó al 100%
+          if (tab.id === "calidad" || tab.id === "nc") {
+            if (!isMachiningComplete) {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: Deben completarse todas las operaciones de la Hoja de Ruta antes de iniciar inspecciones de calidad.";
+            }
+          }
+
+          // Gate 2: Entrega se bloquea si hay retrabajo, rechazo, NC abierta o cancelada
+          if (tab.id === "entrega") {
+            if (ot.estado === "cancelada") {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: La orden fue cancelada por defecto crítico (Scrap). Pieza descartada.";
+            } else if (!isMachiningComplete) {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: Se requiere completar todas las operaciones en Hoja de Ruta.";
+            } else if (hasReworkQuality) {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: Existen controles de calidad en estado 'Retrabajo'. Corrija la pieza antes de entregar.";
+            } else if (hasRejectedQuality) {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: Control de calidad rechazado. La pieza no cumple requisitos para entrega.";
+            } else if (hasActiveNc) {
+              isTabBlocked = true;
+              blockTitle =
+                "Pestaña bloqueada: Existen No Conformidades abiertas o en análisis asociadas a esta orden.";
+            }
+          }
 
           return (
             <button
@@ -491,11 +710,7 @@ export default function WorkOrderDetails() {
               type="button"
               disabled={isTabBlocked}
               onClick={() => !isTabBlocked && setActiveTab(tab.id)}
-              title={
-                isTabBlocked
-                  ? "Pestaña bloqueada: Deben completarse todas las operaciones de la Hoja de Ruta antes de avanzar"
-                  : ""
-              }
+              title={blockTitle}
               className={`${styles.tabBtn} ${
                 activeTab === tab.id ? styles.tabBtnActive : ""
               } ${isTabBlocked ? styles.tabBtnDisabled : ""}`}
@@ -524,10 +739,21 @@ export default function WorkOrderDetails() {
         )}
         {activeTab === "documentacion" && <DocumentsTab otId={ot.id} ot={ot} />}
         {activeTab === "calidad" && (
-          <QualityTab otId={ot.id} ot={ot} operations={operations} />
+          <QualityTab
+            otId={ot.id}
+            ot={ot}
+            operations={operations}
+            onControlsChange={handleQualityChange}
+          />
         )}
         {activeTab === "nc" && (
-          <NonConformitiesTab otId={ot.id} ot={ot} operations={operations} />
+          <NonConformitiesTab
+            otId={ot.id}
+            ot={ot}
+            operations={operations}
+            onNcChange={handleNcChange}
+            onReworkTrigger={handleNcReworkTrigger}
+          />
         )}
         {activeTab === "entrega" && <DeliveryTab otId={ot.id} ot={ot} />}
       </div>

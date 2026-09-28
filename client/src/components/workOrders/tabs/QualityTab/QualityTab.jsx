@@ -364,10 +364,10 @@ function QualityControlModal({
   );
 }
 
-export default function QualityTab({ otId, ot }) {
+export default function QualityTab({ otId, ot, onControlsChange }) {
   const { id } = useParams();
 
-  // Priorizamos siempre el id numérico proveniente de las props del objeto ot
+  // Priorizamos siempre el id numérico del objeto ot para blindar contra el 404
   const currentOtId = ot?.id_ot || ot?.id || otId || id;
 
   const [controls, setControls] = useState([]);
@@ -407,22 +407,25 @@ export default function QualityTab({ otId, ot }) {
       if (typeof api.getControlesOrden === "function") {
         const res = await api.getControlesOrden(currentOtId);
         if (res?.status === "success" && Array.isArray(res.data)) {
-          setControls(
-            res.data.map((c) => ({
-              id: c.id_control || c.id,
-              type: c.tipo
-                ? c.tipo.charAt(0).toUpperCase() + c.tipo.slice(1)
-                : "Dimensional",
-              status: (c.resultado || "aprobado").toLowerCase(),
-              operacionId: c.operacion_id,
-              operacion: c.operacion_id ? `Operación ${c.operacion_id}` : null,
-              medicion: c.medicion,
-              tolerancia: c.tolerancia,
-              observaciones: c.observaciones,
-              fecha: formatDateDisplay(c.fecha),
-              inspector: c.inspector || "Inspector de Calidad",
-            })),
-          );
+          const mapped = res.data.map((c) => ({
+            id: c.id_control || c.id,
+            type: c.tipo
+              ? c.tipo.charAt(0).toUpperCase() + c.tipo.slice(1)
+              : "Dimensional",
+            status: (c.resultado || "aprobado").toLowerCase(),
+            resultado: (c.resultado || "aprobado").toLowerCase(),
+            operacionId: c.operacion_id,
+            operacion: c.operacion_id ? `Operación ${c.operacion_id}` : null,
+            medicion: c.medicion,
+            tolerancia: c.tolerancia,
+            observaciones: c.observaciones,
+            fecha: formatDateDisplay(c.fecha),
+            inspector: c.inspector || "Inspector de Calidad",
+          }));
+          setControls(mapped);
+          if (typeof onControlsChange === "function") {
+            onControlsChange(mapped);
+          }
           return;
         }
       }
@@ -431,7 +434,7 @@ export default function QualityTab({ otId, ot }) {
       console.error("[QualityTab] Error al cargar controles:", err);
       setControls([]);
     }
-  }, [currentOtId]);
+  }, [currentOtId, onControlsChange]);
 
   useEffect(() => {
     let isMounted = true;
@@ -494,7 +497,11 @@ export default function QualityTab({ otId, ot }) {
       if (typeof api.eliminarControlOrden === "function") {
         await api.eliminarControlOrden(toDelete.id);
       }
-      setControls((prev) => prev.filter((c) => c.id !== toDelete.id));
+      const updated = controls.filter((c) => c.id !== toDelete.id);
+      setControls(updated);
+      if (typeof onControlsChange === "function") {
+        onControlsChange(updated);
+      }
     } catch (err) {
       console.error("[QualityTab] Error al eliminar control:", err);
     } finally {

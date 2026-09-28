@@ -9,6 +9,7 @@ import {
   X,
   ChevronDown,
   Check,
+  Lock,
 } from "lucide-react";
 import ConfirmDialog from "../../../common/ConfirmDialog/ConfirmDialog";
 import { api } from "../../../../api/apiClient";
@@ -56,7 +57,6 @@ function parseToIso(dateStr) {
   return String(dateStr).split("T")[0].split(" ")[0];
 }
 
-// Subcomponente modal aislado para creación y edición
 function NonConformityModal({
   isOpen,
   onClose,
@@ -82,6 +82,8 @@ function NonConformityModal({
   const sevMenuRef = useRef(null);
   const statusMenuRef = useRef(null);
   const originMenuRef = useRef(null);
+
+  const isSeverityLocked = editingNc?.severity === "critica";
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -167,16 +169,22 @@ function NonConformityModal({
               <label className={styles.formLabel}>Severidad</label>
               <button
                 type="button"
+                disabled={isSeverityLocked}
                 className={`${styles.customTrigger} ${
                   isSevMenuOpen ? styles.customTriggerActive : ""
-                }`}
-                onClick={() => setIsSevMenuOpen(!isSevMenuOpen)}
+                } ${isSeverityLocked ? styles.disabledTrigger : ""}`}
+                onClick={() => {
+                  if (!isSeverityLocked) setIsSevMenuOpen(!isSevMenuOpen);
+                }}
+                title={isSeverityLocked ? "La severidad crítica es irreversible" : ""}
               >
                 <span>{currentSevOption.label}</span>
-                <ChevronDown size={14} className={styles.chevronIcon} />
+                {!isSeverityLocked && (
+                  <ChevronDown size={14} className={styles.chevronIcon} />
+                )}
               </button>
 
-              {isSevMenuOpen && (
+              {isSevMenuOpen && !isSeverityLocked && (
                 <div className={styles.customDropdownMenu}>
                   {SEVERITY_OPTIONS.map((opt) => (
                     <button
@@ -337,28 +345,36 @@ function NonConformityModal({
   );
 }
 
-export default function NonConformitiesTab({ otId, ot }) {
+export default function NonConformitiesTab({ otId, ot, onNcChange, onReworkTrigger }) {
   const params = useParams();
 
-  // Priorizamos siempre el id numérico del objeto ot para blindar contra el 404 del backend
-  const currentOtId =
-    ot?.id_ot ||
-    ot?.id ||
-    otId ||
-    params.id ||
-    params.idOt ||
-    params.numero;
+  // Asegurar siempre el ID numérico técnico para no romper Flask
+  const rawId = ot?.id_ot || ot?.id || otId || params.id || params.idOt || params.numero;
+  const currentOtId = !isNaN(Number(rawId)) ? Number(rawId) : rawId;
+
+  // Estado de orden cancelada para congelar acciones
+  const isOrderCancelled = (ot?.estado || "").toLowerCase() === "cancelada";
 
   const [ncList, setNcList] = useState([]);
   const [toDelete, setToDelete] = useState(null);
-
-  // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNc, setEditingNc] = useState(null);
+
+  // Aislamos las funciones callback en refs para que jamás disparen re-renders en bucle
+  const onNcChangeRef = useRef(onNcChange);
+  useEffect(() => {
+    onNcChangeRef.current = onNcChange;
+  }, [onNcChange]);
+
+  const onReworkTriggerRef = useRef(onReworkTrigger);
+  useEffect(() => {
+    onReworkTriggerRef.current = onReworkTrigger;
+  }, [onReworkTrigger]);
 
   const loadNcList = useCallback(async () => {
     if (!currentOtId) {
       setNcList([]);
+      if (typeof onNcChangeRef.current === "function") onNcChangeRef.current([]);
       return;
     }
     try {
@@ -377,13 +393,18 @@ export default function NonConformitiesTab({ otId, ot }) {
             date: formatDateDisplay(item.fecha_reporte || item.fecha_deteccion || item.date),
           }));
           setNcList(mapped);
+          if (typeof onNcChangeRef.current === "function") {
+            onNcChangeRef.current(mapped);
+          }
           return;
         }
       }
       setNcList([]);
+      if (typeof onNcChangeRef.current === "function") onNcChangeRef.current([]);
     } catch (err) {
       console.error("[NonConformitiesTab] Error al cargar no conformidades:", err);
       setNcList([]);
+      if (typeof onNcChangeRef.current === "function") onNcChangeRef.current([]);
     }
   }, [currentOtId]);
 
@@ -399,11 +420,13 @@ export default function NonConformitiesTab({ otId, ot }) {
   }, [loadNcList]);
 
   const handleOpenCreateModal = () => {
+    if (isOrderCancelled) return;
     setEditingNc(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (nc) => {
+    if (isOrderCancelled || nc.severity === "critica") return;
     setEditingNc(nc);
     setIsModalOpen(true);
   };
@@ -432,20 +455,34 @@ export default function NonConformitiesTab({ otId, ot }) {
           await api.crearNoConformidadOrden(currentOtId, payloadBackend);
         }
       }
+
       await loadNcList();
       setIsModalOpen(false);
+
+      if (typeof onReworkTriggerRef.current === "function") {
+        onReworkTriggerRef.current({
+          severity: formData.severity,
+          title: formData.title,
+          correctiveAction: formData.correctiveAction,
+          status: formData.status,
+        });
+      }
     } catch (err) {
       console.error("[NonConformitiesTab] Error al guardar no conformidad:", err);
     }
   };
 
   const confirmDelete = async () => {
-    if (!toDelete) return;
+    if (!toDelete || isOrderCancelled) return;
     try {
       if (typeof api.eliminarNoConformidad === "function") {
         await api.eliminarNoConformidad(toDelete.id);
       }
-      setNcList((prev) => prev.filter((item) => item.id !== toDelete.id));
+      const updated = ncList.filter((item) => item.id !== toDelete.id);
+      setNcList(updated);
+      if (typeof onNcChangeRef.current === "function") {
+        onNcChangeRef.current(updated);
+      }
     } catch (err) {
       console.error("[NonConformitiesTab] Error al eliminar no conformidad:", err);
     } finally {
@@ -517,8 +554,11 @@ export default function NonConformitiesTab({ otId, ot }) {
         </div>
         <button
           type="button"
+          disabled={isOrderCancelled}
           onClick={handleOpenCreateModal}
-          className={styles.btnAddNC}
+          className={`${styles.btnAddNC} ${isOrderCancelled ? styles.btnDisabled : ""}`}
+          title={isOrderCancelled ? "No se pueden registrar desvíos en una orden cancelada" : ""}
+          style={isOrderCancelled ? { opacity: 0.5, cursor: "not-allowed" } : {}}
         >
           <Plus size={15} strokeWidth={2.5} /> No conformidad
         </button>
@@ -537,63 +577,85 @@ export default function NonConformitiesTab({ otId, ot }) {
         </div>
       ) : (
         <div className={styles.ncList}>
-          {ncList.map((item) => (
-            <div key={item.id} className={styles.ncCard}>
-              <div className={styles.alertIconBox}>
-                <AlertTriangle size={18} strokeWidth={2.2} />
-              </div>
+          {ncList.map((item) => {
+            const isRowLocked = isOrderCancelled || item.severity === "critica";
 
-              <div className={styles.ncInfo}>
-                <div className={styles.headerLine}>
-                  <div className={styles.headerLeftTags}>
-                    <p className={styles.ncTitle}>{item.title}</p>
-                    {renderSeverityBadge(item.severity)}
-                    {renderStatusBadge(item.status)}
-                    {item.origin && (
-                      <span className={styles.originChip}>{item.origin}</span>
-                    )}
-                  </div>
-
-                  <span className={styles.metaReporter}>
-                    {item.date} · {item.reporter}
-                  </span>
+            return (
+              <div key={item.id} className={styles.ncCard}>
+                <div className={styles.alertIconBox}>
+                  <AlertTriangle size={18} strokeWidth={2.2} />
                 </div>
 
-                {item.description && (
-                  <p className={styles.descriptionText}>{item.description}</p>
-                )}
+                <div className={styles.ncInfo}>
+                  <div className={styles.headerLine}>
+                    <div className={styles.headerLeftTags}>
+                      <p className={styles.ncTitle}>{item.title}</p>
+                      {renderSeverityBadge(item.severity)}
+                      {renderStatusBadge(item.status)}
+                      {item.origin && (
+                        <span className={styles.originChip}>{item.origin}</span>
+                      )}
+                    </div>
 
-                {item.correctiveAction && (
-                  <div className={styles.correctiveActionBox}>
-                    <strong>Acción correctiva:</strong> {item.correctiveAction}
+                    <span className={styles.metaReporter}>
+                      {item.date} · {item.reporter}
+                    </span>
                   </div>
-                )}
-              </div>
+
+                  {item.description && (
+                    <p className={styles.descriptionText}>{item.description}</p>
+                  )}
+
+                  {item.correctiveAction && (
+                    <div className={styles.correctiveActionBox}>
+                      <strong>Acción correctiva:</strong> {item.correctiveAction}
+                    </div>
+                  )}
+                </div>
 
               <div className={styles.rowActions}>
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditModal(item)}
-                  className={styles.btnRowAction}
-                  title="Editar no conformidad"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setToDelete(item)}
-                  className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
-                  title="Eliminar no conformidad"
-                >
-                  <Trash2 size={15} />
-                </button>
+                  {!isRowLocked ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(item)}
+                        className={styles.btnRowAction}
+                        title="Editar no conformidad"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToDelete(item)}
+                        className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
+                        title="Eliminar no conformidad"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "12px",
+                        color: "var(--text-muted, #64748b)",
+                        paddingRight: "8px",
+                      }}
+                      title="Registro bloqueado por auditoría (Orden Cancelada / Scrap)"
+                    >
+                      <Lock size={13} strokeWidth={2} />
+                      <span>Solo lectura</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Modal Crear / Editar montado con key */}
       <NonConformityModal
         key={editingNc ? editingNc.id : "create-nc"}
         isOpen={isModalOpen}

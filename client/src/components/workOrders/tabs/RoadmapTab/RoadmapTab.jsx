@@ -49,8 +49,16 @@ function RoadmapOpModal({
     name: editingOp?.name || "",
     type: editingOp?.type || "Torneado",
     status: editingOp?.status || "pendiente",
-    operator: editingOp ? (editingOp.operator === "—" ? "" : editingOp.operator || "") : defaultOperator || "",
-    machine: editingOp ? (editingOp.machine === "—" ? "" : editingOp.machine || "") : "Torno CNC",
+    operator: editingOp
+      ? editingOp.operator === "—"
+        ? ""
+        : editingOp.operator || ""
+      : defaultOperator || "",
+    machine: editingOp
+      ? editingOp.machine === "—"
+        ? ""
+        : editingOp.machine || ""
+      : "Torno CNC",
     estimatedTime: editingOp?.estimatedTime || 45,
     realTime: editingOp?.realTime || 0,
     description: editingOp?.description || "",
@@ -166,7 +174,9 @@ function RoadmapOpModal({
                       }}
                     >
                       <span>{t}</span>
-                      {form.type === t && <Check size={14} className={styles.checkIcon} />}
+                      {form.type === t && (
+                        <Check size={14} className={styles.checkIcon} />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -304,10 +314,15 @@ export default function RoadmapTab({
   onDeleteOperation,
 }) {
   const { id } = useParams();
-const currentOtId = ot?.id_ot || ot?.id || otId || id;
+  const rawId = ot?.id_ot || ot?.id || otId || id;
+  const currentOtId = !isNaN(Number(rawId)) ? Number(rawId) : rawId;
 
-  const [opsList, setOpsList] = useState(initialOperations);
+  const [opsList, setOpsList] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Derivación de estado: Si opsList tiene registros locales actualizados los usa;
+  // de lo contrario, toma de forma reactiva las operaciones provistas por el padre.
+  const currentOps = opsList.length > 0 ? opsList : initialOperations;
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -323,7 +338,7 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
     try {
       if (typeof api.getOperacionesOrden === "function") {
         const res = await api.getOperacionesOrden(currentOtId);
-        if (res?.status === "success" && Array.isArray(res.data)) {
+        if (res?.status === "success" && Array.isArray(res.data) && res.data.length > 0) {
           const mapped = res.data.map((item, index) => ({
             id: item.id_operacion || item.id,
             step: item.secuencia || (index + 1) * 10,
@@ -332,7 +347,7 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
             operator: item.operario_asignado || item.operario || "—",
             time: item.tiempo_estimado ? `${item.tiempo_estimado} min` : "—",
             machine: item.maquina || "Taller General",
-            status: item.estado || "pendiente",
+            status: (item.estado || "pendiente").toLowerCase(),
             description: item.descripcion_tarea || item.descripcion || "",
             estimatedTime: item.tiempo_estimado || 0,
             realTime: item.tiempo_real || 0,
@@ -341,10 +356,20 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
           return;
         }
       }
-      setOpsList([]);
+
+      // Fallback a localStorage
+      const storageKey = `qt_ops_${currentOtId}`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        setOpsList(JSON.parse(stored));
+      }
     } catch (err) {
-      console.error("[RoadmapTab] Error al cargar operaciones:", err);
-      setOpsList([]);
+      console.warn("[RoadmapTab] Error al cargar operaciones de API, usando storage:", err);
+      const storageKey = `qt_ops_${currentOtId}`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        setOpsList(JSON.parse(stored));
+      }
     }
   }, [currentOtId]);
 
@@ -359,14 +384,17 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
     };
   }, [loadOperations]);
 
-  const completedOps = opsList.filter((o) => o.status === "completada").length;
+  const completedOps = currentOps.filter(
+    (o) => (o.status || "").toLowerCase() === "completada"
+  ).length;
+
   const progressPercent =
-    opsList.length > 0 ? Math.round((completedOps / opsList.length) * 100) : 0;
+    currentOps.length > 0 ? Math.round((completedOps / currentOps.length) * 100) : 0;
 
   const calculateNextSeq = () => {
-    if (opsList.length === 0) return 10;
-    const lastOp = opsList[opsList.length - 1];
-    return (Number(lastOp.step) || opsList.length * 10) + 10;
+    if (currentOps.length === 0) return 10;
+    const lastOp = currentOps[currentOps.length - 1];
+    return (Number(lastOp.step) || currentOps.length * 10) + 10;
   };
 
   const handleOpenCreateModal = () => {
@@ -383,7 +411,7 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
     const payloadBackend = {
       nombre: formData.name.trim(),
       operario: formData.operator.trim() || ot?.responsable || "",
-      estado: formData.status,
+      estado: formData.status.toLowerCase(),
       secuencia: Number(formData.secuencia) || 10,
       tipo: formData.type,
       maquina: formData.machine.trim(),
@@ -395,9 +423,9 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
     try {
       if (editingOp) {
         if (typeof api.actualizarOperacionOrden === "function") {
-          await api.actualizarOperacionOrden(editingOp.id, payloadBackend);
-          await loadOperations();
-        } else if (onUpdateOperation) {
+          await api.actualizarOperacionOrden(editingOp.id, payloadBackend).catch(() => {});
+        }
+        if (onUpdateOperation) {
           onUpdateOperation(editingOp.id, {
             step: payloadBackend.secuencia,
             name: payloadBackend.nombre,
@@ -408,22 +436,56 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
             description: payloadBackend.descripcion,
           });
         }
+        setOpsList((prev) => {
+          const base = prev.length > 0 ? prev : initialOperations;
+          const updated = base.map((o) =>
+            o.id === editingOp.id
+              ? {
+                  ...o,
+                  step: payloadBackend.secuencia,
+                  name: payloadBackend.nombre,
+                  type: payloadBackend.tipo,
+                  operator: payloadBackend.operario || "—",
+                  machine: payloadBackend.maquina || "—",
+                  status: payloadBackend.estado,
+                  description: payloadBackend.descripcion,
+                }
+              : o
+          );
+          localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+          return updated;
+        });
       } else {
+        let newId = Date.now();
         if (typeof api.crearOperacionOrden === "function") {
-          await api.crearOperacionOrden(currentOtId, payloadBackend);
-          await loadOperations();
-        } else if (onAddOperation) {
-          onAddOperation({
-            id: Date.now(),
-            step: payloadBackend.secuencia,
-            name: payloadBackend.nombre,
-            type: payloadBackend.tipo,
-            operator: payloadBackend.operario || "—",
-            time: payloadBackend.tiempo_estimado ? `${payloadBackend.tiempo_estimado} min` : "—",
-            machine: payloadBackend.maquina || "—",
-            status: payloadBackend.estado,
-          });
+          try {
+            const res = await api.crearOperacionOrden(currentOtId, payloadBackend);
+            if (res?.data?.id_operacion || res?.data?.id) {
+              newId = res.data.id_operacion || res.data.id;
+            }
+          } catch (e) {
+            console.warn("[RoadmapTab] Error al persistir en backend:", e);
+          }
         }
+        const newOp = {
+          id: newId,
+          step: payloadBackend.secuencia,
+          name: payloadBackend.nombre,
+          type: payloadBackend.tipo,
+          operator: payloadBackend.operario || "—",
+          time: payloadBackend.tiempo_estimado
+            ? `${payloadBackend.tiempo_estimado} min`
+            : "—",
+          machine: payloadBackend.maquina || "—",
+          status: payloadBackend.estado,
+        };
+        if (onAddOperation) onAddOperation(newOp);
+        setOpsList((prev) => {
+          const base = prev.length > 0 ? prev : initialOperations;
+          const updated = [...base, newOp];
+          localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+          return updated;
+        });
       }
       setIsModalOpen(false);
     } catch (err) {
@@ -435,12 +497,17 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
     if (!toDelete) return;
     try {
       if (typeof api.eliminarOperacionOrden === "function") {
-        await api.eliminarOperacionOrden(toDelete.id);
-        await loadOperations();
-      } else if (onDeleteOperation) {
+        await api.eliminarOperacionOrden(toDelete.id).catch(() => {});
+      }
+      if (onDeleteOperation) {
         onDeleteOperation(toDelete.id);
       }
-      setOpsList((prev) => prev.filter((o) => o.id !== toDelete.id));
+      setOpsList((prev) => {
+        const base = prev.length > 0 ? prev : initialOperations;
+        const updated = base.filter((o) => o.id !== toDelete.id);
+        localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+        return updated;
+      });
     } catch (err) {
       console.error("[RoadmapTab] Error al eliminar operación:", err);
     } finally {
@@ -449,21 +516,31 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
   };
 
   const handleStatusChangeLocal = async (opId, newStatus) => {
-    setOpsList((prev) =>
-      prev.map((o) => (o.id === opId ? { ...o, status: newStatus } : o))
-    );
+    const cleanStatus = String(newStatus).toLowerCase();
+
+    // 1. Actualización local inmediata
+    setOpsList((prev) => {
+      const base = prev.length > 0 ? prev : initialOperations;
+      const updated = base.map((o) =>
+        o.id === opId ? { ...o, status: cleanStatus } : o
+      );
+      localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+      return updated;
+    });
     setOpenMenuId(null);
 
+    // 2. Avisar al padre (WorkOrderDetails) para actualizar el Quality Gate
+    if (typeof onOpStatusChange === "function") {
+      onOpStatusChange(opId, cleanStatus);
+    }
+
+    // 3. Persistencia asíncrona en Backend
     try {
       if (typeof api.actualizarEstadoOperacion === "function") {
-        await api.actualizarEstadoOperacion(opId, newStatus);
-      }
-      if (onOpStatusChange) {
-        onOpStatusChange(opId, newStatus);
+        await api.actualizarEstadoOperacion(opId, cleanStatus);
       }
     } catch (err) {
-      console.error("[RoadmapTab] Error al actualizar estado de la operación:", err);
-      loadOperations();
+      console.warn("[RoadmapTab] Aviso: No se pudo sincronizar estado con backend:", err);
     }
   };
 
@@ -473,7 +550,7 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
         <div>
           <h3 className={styles.tabMainTitle}>Hoja de Ruta</h3>
           <p className={styles.tabProgressSub}>
-            {opsList.length} operaciones · {completedOps} completadas · {progressPercent}%
+            {currentOps.length} operaciones · {completedOps} completadas · {progressPercent}%
           </p>
         </div>
         <button
@@ -485,7 +562,7 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
         </button>
       </div>
 
-      {opsList.length === 0 ? (
+      {currentOps.length === 0 ? (
         <div className={styles.emptyRoadmapBox}>
           <div className={styles.emptyRoadmapIconCircle}>
             <Inbox size={22} strokeWidth={1.8} />
@@ -497,9 +574,11 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
         </div>
       ) : (
         <div className={styles.opsList}>
-          {opsList.map((op) => {
+          {currentOps.map((op) => {
             const currentOption =
-              OP_STATUS_OPTIONS.find((o) => o.value === op.status) || OP_STATUS_OPTIONS[0];
+              OP_STATUS_OPTIONS.find(
+                (o) => o.value === (op.status || "").toLowerCase()
+              ) || OP_STATUS_OPTIONS[0];
 
             return (
               <div key={op.id} className={styles.opRow}>
@@ -528,7 +607,9 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
                     <button
                       type="button"
                       className={styles.customTriggerBtn}
-                      onClick={() => setOpenMenuId(openMenuId === op.id ? null : op.id)}
+                      onClick={() =>
+                        setOpenMenuId(openMenuId === op.id ? null : op.id)
+                      }
                     >
                       <span>{currentOption.label}</span>
                       <ChevronDown size={14} className={styles.chevronIcon} />
@@ -541,12 +622,16 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
                             key={opt.value}
                             type="button"
                             className={`${styles.customOptionItem} ${
-                              op.status === opt.value ? styles.customOptionSelected : ""
+                              (op.status || "").toLowerCase() === opt.value
+                                ? styles.customOptionSelected
+                                : ""
                             }`}
-                            onClick={() => handleStatusChangeLocal(op.id, opt.value)}
+                            onClick={() =>
+                              handleStatusChangeLocal(op.id, opt.value)
+                            }
                           >
                             <span>{opt.label}</span>
-                            {op.status === opt.value && (
+                            {(op.status || "").toLowerCase() === opt.value && (
                               <Check size={14} className={styles.checkIcon} />
                             )}
                           </button>
@@ -599,7 +684,8 @@ const currentOtId = ot?.id_ot || ot?.id || otId || id;
         description={
           toDelete ? (
             <>
-              ¿Eliminar la operación <strong>"{toDelete.name}"</strong>? Esta acción no se puede deshacer.
+              ¿Eliminar la operación <strong>"{toDelete.name}"</strong>? Esta
+              acción no se puede deshacer.
             </>
           ) : (
             ""
