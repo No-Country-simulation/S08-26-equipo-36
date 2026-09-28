@@ -9,11 +9,13 @@ def get_db_connection():
     try:
         conexion = mysql.connector.connect(
             host=Config.DB_HOST,
+            port=Config.DB_PORT,
             user=Config.DB_USER,
             password=Config.DB_PASSWORD,
-            database=Config.DB_NAME
+            database=Config.DB_NAME,
+            ssl_disabled=False
         )
         return conexion
     except mysql.connector.Error as err:
-        print(f" Error conectando a MySQL: {err}")
+        print(f"Error conectando a MySQL: {err}")
         return None
