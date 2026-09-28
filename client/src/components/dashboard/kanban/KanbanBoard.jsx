@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Box } from "lucide-react";
 import styles from "./KanbanBoard.module.css";
@@ -10,30 +9,8 @@ const COLUMNS = [
   { id: "liberada", label: "Liberada", colorClass: styles.dotLiberada },
 ];
 
-export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
+export default function KanbanBoard({ ots = [], onCardClick }) {
   const navigate = useNavigate();
-  const [dragOverCol, setDragOverCol] = useState(null);
-
-  const handleDragStart = (e, otId) => {
-    e.dataTransfer.setData("text/plain", String(otId));
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e, colId) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (dragOverCol !== colId) setDragOverCol(colId);
-  };
-
-  const handleDrop = (e, targetStatus) => {
-    e.preventDefault();
-    setDragOverCol(null);
-    const otId = e.dataTransfer.getData("text/plain");
-    const ot = ots.find((o) => String(o.id) === String(otId));
-    if (ot && ot.estado !== targetStatus && onMove) {
-      onMove(ot, targetStatus);
-    }
-  };
 
   const handleClick = (ot) => {
     if (onCardClick) {
@@ -46,14 +23,21 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
   const formatDate = (dateValue) => {
     if (!dateValue) return null;
     try {
-      const cleanDate = typeof dateValue === "string" ? dateValue.split("T")[0].split(" ")[0] : "";
+      const cleanDate =
+        typeof dateValue === "string"
+          ? dateValue.split("T")[0].split(" ")[0]
+          : "";
       if (cleanDate.includes("-")) {
         const [year, month, day] = cleanDate.split("-");
         return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
       }
       const d = new Date(dateValue);
       if (!isNaN(d.getTime())) {
-        return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+        return d.toLocaleDateString("es-AR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
       }
     } catch {
       return String(dateValue);
@@ -64,29 +48,25 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
   return (
     <div className={styles.boardContainer}>
       {COLUMNS.map((col) => {
-      const columnOts = ots.filter((ot) => {
-  const currentStatus = ot.estado || ot.estado_actual;
+        const columnOts = ots.filter((ot) => {
+          const currentStatus = ot.estado || ot.estado_actual;
 
-  if (col.id === "en_proceso") {
-    return ["en_proceso", "mecanizado"].includes(currentStatus);
-  }
-  if (col.id === "control_calidad") {
-    return ["control_calidad", "calidad"].includes(currentStatus);
-  }
-  if (col.id === "liberada") {
-    return ["liberada", "finalizada", "entregada"].includes(currentStatus);
-  }
-  return currentStatus === col.id;
-});
+          if (col.id === "en_proceso") {
+            return ["en_proceso", "mecanizado"].includes(currentStatus);
+          }
+          if (col.id === "control_calidad") {
+            return ["control_calidad", "calidad"].includes(currentStatus);
+          }
+          if (col.id === "liberada") {
+            return ["liberada", "finalizada", "entregada"].includes(
+              currentStatus,
+            );
+          }
+          return currentStatus === col.id;
+        });
 
         return (
-          <div
-            key={col.id}
-            className={`${styles.column} ${dragOverCol === col.id ? styles.columnDraggingOver : ""}`}
-            onDragOver={(e) => handleDragOver(e, col.id)}
-            onDragLeave={() => setDragOverCol(null)}
-            onDrop={(e) => handleDrop(e, col.id)}
-          >
+          <div key={col.id} className={styles.column}>
             {/* Cabecera Columna */}
             <div className={styles.columnHeader}>
               <div className={styles.columnTitleWrap}>
@@ -107,17 +87,16 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
                     prio === "alta" || prio === "urgente"
                       ? styles.priorityHigh
                       : prio === "baja"
-                      ? styles.priorityLow
-                      : styles.priorityMed;
+                        ? styles.priorityLow
+                        : styles.priorityMed;
 
-                  const rawDate = ot.fecha_creacion || ot.fecha_inicio || ot.created_at;
+                  const rawDate =
+                    ot.fecha_creacion || ot.fecha_inicio || ot.created_at;
                   const formattedDate = formatDate(rawDate);
 
                   return (
                     <div
                       key={ot.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, ot.id)}
                       onClick={() => handleClick(ot)}
                       className={styles.card}
                     >
@@ -126,13 +105,19 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
                         <span className={styles.otNumber}>
                           {ot.numero || `OT-${String(ot.id).padStart(4, "0")}`}
                         </span>
-                        <span className={`${styles.cornerDot} ${col.colorClass}`} />
+                        <span
+                          className={`${styles.cornerDot} ${col.colorClass}`}
+                        />
                       </div>
 
                       {/* Pieza y Cliente debajo */}
-                      <h4 className={styles.pieceTitle}>{ot.pieza || "Pieza en proceso"}</h4>
+                      <h4 className={styles.pieceTitle}>
+                        {ot.pieza || "Pieza en proceso"}
+                      </h4>
                       <p className={styles.clientName}>
-                        {ot.cliente_nombre || ot.cliente || "Cliente General"}
+                        {ot.cliente_nombre ||
+                          ot.cliente ||
+                          "Cliente General"}
                       </p>
 
                       {/* Línea divisoria y pie con cantidad/fecha y prioridad */}
@@ -145,13 +130,20 @@ export default function KanbanBoard({ ots = [], onMove, onCardClick }) {
 
                           {formattedDate && (
                             <div className={styles.metaRow}>
-                              <Calendar size={13} className={styles.metaIcon} />
-                              <span className={styles.dateText}>{formattedDate}</span>
+                              <Calendar
+                                size={13}
+                                className={styles.metaIcon}
+                              />
+                              <span className={styles.dateText}>
+                                {formattedDate}
+                              </span>
                             </div>
                           )}
                         </div>
 
-                        <span className={`${styles.priorityPill} ${priorityClass}`}>
+                        <span
+                          className={`${styles.priorityPill} ${priorityClass}`}
+                        >
                           <span className={styles.prioDot} />
                           {ot.prioridad || "Media"}
                         </span>

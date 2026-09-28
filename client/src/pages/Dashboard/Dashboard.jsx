@@ -95,29 +95,6 @@ export default function Dashboard() {
     };
   }, [loadDashboardData]);
 
-  const handleMove = async (ot, targetStatus) => {
-    setOts((prev) =>
-      prev.map((o) =>
-        String(o.id) === String(ot.id) ? { ...o, estado: targetStatus } : o,
-      ),
-    );
-
-    const backendStatus =
-      targetStatus === "liberada" ? "finalizada" : targetStatus;
-
-    try {
-      if (typeof api.actualizarEstadoOrden === "function") {
-        await api.actualizarEstadoOrden(ot.id, backendStatus);
-      }
-    } catch (err) {
-      console.error(
-        "[Dashboard] Error actualizando estado de orden vía drag & drop:",
-        err,
-      );
-      loadDashboardData();
-    }
-  };
-
   const handleCardClick = (ot) => {
     navigate(`/ordenes/${ot.id}`);
   };
@@ -150,8 +127,7 @@ export default function Dashboard() {
         <div>
           <h1 className={styles.title}>Centro de Operaciones</h1>
           <p className={styles.subtitle}>
-            Flujo de órdenes en tiempo real (arrastrá las tarjetas para cambiar
-            de estado).
+            Monitoreo y trazabilidad de órdenes en tiempo real según el avance técnico en planta.
           </p>
         </div>
 
@@ -241,10 +217,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Tablero Kanban modular */}
+      {/* Tablero Kanban de monitoreo */}
       <KanbanBoard
         ots={ots}
-        onMove={handleMove}
         onCardClick={handleCardClick}
       />
 
