@@ -26,34 +26,24 @@ import OrderTracking from "./pages/OrderTracking/OrderTracking";
 
 const AUTH_PROTECTION_ENABLED = true;
 
-// 1. Guardián de rutas protegidas
 function ProtectedRoute() {
   const location = useLocation();
   const { user, loading } = useAuth();
 
-  if (!AUTH_PROTECTION_ENABLED) {
-    return <Outlet />;
-  }
-
-  if (loading) {
-    return <Spinner fullScreen text="Verificando credenciales..." />;
-  }
+  if (!AUTH_PROTECTION_ENABLED) return <Outlet />;
+  if (loading) return <Spinner fullScreen text="Verificando credenciales..." />;
 
   if (!user) {
-    // Si intenta entrar a "/", redirige directo a "/login" limpio.
-    // Si intenta entrar a una ruta profunda (ej: "/ordenes"), conserva el returnTo.
     const redirectUrl =
       location.pathname === "/"
         ? "/login"
         : `/login?returnTo=${encodeURIComponent(location.pathname)}`;
-
     return <Navigate to={redirectUrl} replace />;
   }
 
   return <Outlet />;
 }
 
-// 2. Layout exclusivo de las páginas internas del sistema
 function InternalLayout() {
   const location = useLocation();
   const isShopFloor = location.pathname.startsWith("/taller");
@@ -62,21 +52,20 @@ function InternalLayout() {
     <div
       style={{
         display: "flex",
-        height: "100vh", // Anclado a la altura exacta del viewport
+        height: "100vh",
         width: "100%",
-        overflow: "hidden", // Evita que la ventana completa genere scroll
+        overflow: "hidden",
         backgroundColor: "var(--bg-main)",
       }}
     >
       {!isShopFloor && <Sidebar />}
-
       <main
         style={{
           flex: 1,
           height: "100vh",
-          overflowY: "auto", // El scroll solo aparece aquí cuando el contenido lo excede
+          overflowY: "auto",
           overflowX: "hidden",
-          padding: 0, // 👈 Eliminamos el padding duplicado (las páginas ya lo gestionan en .container)
+          padding: 0,
           boxSizing: "border-box",
         }}
       >
@@ -86,7 +75,6 @@ function InternalLayout() {
   );
 }
 
-// 3. Layout exclusivo para pantallas de autenticación
 function AuthLayoutWrapper() {
   return (
     <div
@@ -108,11 +96,9 @@ export default function App() {
     <Router>
       <AuthProvider>
         <Routes>
-         {/* Landing Page Pública y Seguimiento de OT */}
           <Route path="/landing" element={<Welcome />} />
           <Route path="/seguimiento" element={<OrderTracking />} />
 
-          {/* Rutas Públicas de Autenticación */}
           <Route element={<AuthLayoutWrapper />}>
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
@@ -120,7 +106,6 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
 
-          {/* Rutas Protegidas de la Aplicación */}
           <Route element={<ProtectedRoute />}>
             <Route element={<InternalLayout />}>
               <Route path="/" element={<Dashboard />} />

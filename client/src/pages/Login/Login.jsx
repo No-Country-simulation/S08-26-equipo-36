@@ -54,12 +54,16 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
     try {
       setError("");
       setGoogleLoading(true);
+      // Evita que el splash screen se vuelva a disparar al regresar del callback de Google
+      sessionStorage.setItem("qt_logging_in_google", "true");
       await signInWithGoogle();
     } catch (err) {
+      // Si la llamada falla antes de salir del sitio, limpiamos la marca
+      sessionStorage.removeItem("qt_logging_in_google");
       setError(err.message || "Error al conectar con Google.");
       setGoogleLoading(false);
     }
