@@ -110,14 +110,12 @@ export default function Quotes() {
 
     async function loadInitialData() {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
         const [resCot, resSol, resCli] = await Promise.all([
           api.getCotizaciones(),
           api.getSolicitudes(),
           typeof api.getClientes === "function"
             ? api.getClientes()
             : Promise.resolve({ data: [] }),
-          minDelay,
         ]);
 
         if (!isMounted) return;

@@ -77,8 +77,7 @@ export default function WorkOrders() {
 
     async function loadOrdenes() {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
-        const [res] = await Promise.all([api.getOrdenes(), minDelay]);
+        const res = await api.getOrdenes();
 
         if (isMounted && res?.status === "success" && Array.isArray(res.data)) {
           setItems(

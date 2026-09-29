@@ -94,13 +94,12 @@ export default function WorkOrderDetails() {
   // const otMenuRef = useRef(null);
 
   // Carga inicial y datos vinculados
-  useEffect(() => {
+useEffect(() => {
     let isMounted = true;
 
     const fetchOtDetail = async () => {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 300));
-        const [res] = await Promise.all([api.getDetalleOrden(id), minDelay]);
+        const res = await api.getDetalleOrden(id);
 
         if (!isMounted) return;
 

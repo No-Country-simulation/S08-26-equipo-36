@@ -88,16 +88,14 @@ export default function Requests() {
   };
 
   // Carga inicial sincronizada
-  useEffect(() => {
+ useEffect(() => {
     let isMounted = true;
 
     async function loadInitialData() {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
         const [resSol, resCli] = await Promise.all([
           api.getSolicitudes(),
           api.getClientes(),
-          minDelay,
         ]);
 
         if (!isMounted) return;

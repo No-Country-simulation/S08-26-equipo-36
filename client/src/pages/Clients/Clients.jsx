@@ -41,8 +41,7 @@ export default function Clientes() {
 
     async function loadInitialData() {
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
-        const [res] = await Promise.all([api.getClientes(), minDelay]);
+        const res = await api.getClientes();
 
         if (isMounted && res?.status === "success" && Array.isArray(res.data)) {
           setItems(res.data.map(formatClient));
@@ -94,9 +93,14 @@ export default function Clientes() {
           setItems((prev) =>
             prev.map((item) =>
               item.id === editingClient.id
-                ? { ...item, ...payload, id: editingClient.id, nombre: payload.razon_social }
-                : item
-            )
+                ? {
+                    ...item,
+                    ...payload,
+                    id: editingClient.id,
+                    nombre: payload.razon_social,
+                  }
+                : item,
+            ),
           );
         }
       } else {
@@ -134,7 +138,7 @@ export default function Clientes() {
       .filter(Boolean)
       .join(" ")
       .toLowerCase()
-      .includes(search.toLowerCase())
+      .includes(search.toLowerCase()),
   );
 
   if (loading) {
@@ -151,7 +155,11 @@ export default function Clientes() {
             Empresas y contactos que solicitan trabajos de mecanizado.
           </p>
         </div>
-        <button type="button" onClick={handleOpenNew} className={styles.btnPrimary}>
+        <button
+          type="button"
+          onClick={handleOpenNew}
+          className={styles.btnPrimary}
+        >
           <Plus size={16} strokeWidth={2.5} /> Nuevo cliente
         </button>
       </header>
@@ -192,7 +200,9 @@ export default function Clientes() {
                   </div>
                   <div className={styles.nameCol}>
                     <p className={styles.clientName}>{c.nombre}</p>
-                    {c.contacto && <p className={styles.contactName}>{c.contacto}</p>}
+                    {c.contacto && (
+                      <p className={styles.contactName}>{c.contacto}</p>
+                    )}
                   </div>
                 </div>
 
@@ -229,7 +239,11 @@ export default function Clientes() {
                     <span>{c.telefono}</span>
                   </div>
                 )}
-                {c.ruc_nit && <span className={styles.cuitBadge}>ID Fiscal: {c.ruc_nit}</span>}
+                {c.ruc_nit && (
+                  <span className={styles.cuitBadge}>
+                    ID Fiscal: {c.ruc_nit}
+                  </span>
+                )}
               </div>
             </article>
           ))}
