@@ -86,7 +86,8 @@ function RoadmapOpModal({
   if (!isOpen) return null;
 
   const currentModalStatus =
-    OP_STATUS_OPTIONS.find((s) => s.value === form.status) || OP_STATUS_OPTIONS[0];
+    OP_STATUS_OPTIONS.find((s) => s.value === form.status) ||
+    OP_STATUS_OPTIONS[0];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -308,6 +309,7 @@ export default function RoadmapTab({
   otId,
   ot,
   operations: initialOperations = [],
+  readOnly = false,
   onOpStatusChange,
   onAddOperation,
   onUpdateOperation,
@@ -320,8 +322,6 @@ export default function RoadmapTab({
   const [opsList, setOpsList] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
 
-  // Derivación de estado: Si opsList tiene registros locales actualizados los usa;
-  // de lo contrario, toma de forma reactiva las operaciones provistas por el padre.
   const currentOps = opsList.length > 0 ? opsList : initialOperations;
 
   // Modales
@@ -338,7 +338,11 @@ export default function RoadmapTab({
     try {
       if (typeof api.getOperacionesOrden === "function") {
         const res = await api.getOperacionesOrden(currentOtId);
-        if (res?.status === "success" && Array.isArray(res.data) && res.data.length > 0) {
+        if (
+          res?.status === "success" &&
+          Array.isArray(res.data) &&
+          res.data.length > 0
+        ) {
           const mapped = res.data.map((item, index) => ({
             id: item.id_operacion || item.id,
             step: item.secuencia || (index + 1) * 10,
@@ -364,7 +368,10 @@ export default function RoadmapTab({
         setOpsList(JSON.parse(stored));
       }
     } catch (err) {
-      console.warn("[RoadmapTab] Error al cargar operaciones de API, usando storage:", err);
+      console.warn(
+        "[RoadmapTab] Error al cargar operaciones de API, usando storage:",
+        err,
+      );
       const storageKey = `qt_ops_${currentOtId}`;
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -385,11 +392,13 @@ export default function RoadmapTab({
   }, [loadOperations]);
 
   const completedOps = currentOps.filter(
-    (o) => (o.status || "").toLowerCase() === "completada"
+    (o) => (o.status || "").toLowerCase() === "completada",
   ).length;
 
   const progressPercent =
-    currentOps.length > 0 ? Math.round((completedOps / currentOps.length) * 100) : 0;
+    currentOps.length > 0
+      ? Math.round((completedOps / currentOps.length) * 100)
+      : 0;
 
   const calculateNextSeq = () => {
     if (currentOps.length === 0) return 10;
@@ -398,16 +407,20 @@ export default function RoadmapTab({
   };
 
   const handleOpenCreateModal = () => {
+    if (readOnly) return;
     setEditingOp(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (op) => {
+    if (readOnly) return;
     setEditingOp(op);
     setIsModalOpen(true);
   };
 
   const handleSaveModal = async (formData) => {
+    if (readOnly) return;
+
     const payloadBackend = {
       nombre: formData.name.trim(),
       operario: formData.operator.trim() || ot?.responsable || "",
@@ -423,7 +436,9 @@ export default function RoadmapTab({
     try {
       if (editingOp) {
         if (typeof api.actualizarOperacionOrden === "function") {
-          await api.actualizarOperacionOrden(editingOp.id, payloadBackend).catch(() => {});
+          await api
+            .actualizarOperacionOrden(editingOp.id, payloadBackend)
+            .catch(() => {});
         }
         if (onUpdateOperation) {
           onUpdateOperation(editingOp.id, {
@@ -450,16 +465,22 @@ export default function RoadmapTab({
                   status: payloadBackend.estado,
                   description: payloadBackend.descripcion,
                 }
-              : o
+              : o,
           );
-          localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+          localStorage.setItem(
+            `qt_ops_${currentOtId}`,
+            JSON.stringify(updated),
+          );
           return updated;
         });
       } else {
         let newId = Date.now();
         if (typeof api.crearOperacionOrden === "function") {
           try {
-            const res = await api.crearOperacionOrden(currentOtId, payloadBackend);
+            const res = await api.crearOperacionOrden(
+              currentOtId,
+              payloadBackend,
+            );
             if (res?.data?.id_operacion || res?.data?.id) {
               newId = res.data.id_operacion || res.data.id;
             }
@@ -483,7 +504,10 @@ export default function RoadmapTab({
         setOpsList((prev) => {
           const base = prev.length > 0 ? prev : initialOperations;
           const updated = [...base, newOp];
-          localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
+          localStorage.setItem(
+            `qt_ops_${currentOtId}`,
+            JSON.stringify(updated),
+          );
           return updated;
         });
       }
@@ -494,7 +518,7 @@ export default function RoadmapTab({
   };
 
   const confirmDelete = async () => {
-    if (!toDelete) return;
+    if (!toDelete || readOnly) return;
     try {
       if (typeof api.eliminarOperacionOrden === "function") {
         await api.eliminarOperacionOrden(toDelete.id).catch(() => {});
@@ -516,13 +540,14 @@ export default function RoadmapTab({
   };
 
   const handleStatusChangeLocal = async (opId, newStatus) => {
+    if (readOnly) return;
     const cleanStatus = String(newStatus).toLowerCase();
 
     // 1. Actualización local inmediata
     setOpsList((prev) => {
       const base = prev.length > 0 ? prev : initialOperations;
       const updated = base.map((o) =>
-        o.id === opId ? { ...o, status: cleanStatus } : o
+        o.id === opId ? { ...o, status: cleanStatus } : o,
       );
       localStorage.setItem(`qt_ops_${currentOtId}`, JSON.stringify(updated));
       return updated;
@@ -540,7 +565,10 @@ export default function RoadmapTab({
         await api.actualizarEstadoOperacion(opId, cleanStatus);
       }
     } catch (err) {
-      console.warn("[RoadmapTab] Aviso: No se pudo sincronizar estado con backend:", err);
+      console.warn(
+        "[RoadmapTab] Aviso: No se pudo sincronizar estado con backend:",
+        err,
+      );
     }
   };
 
@@ -550,16 +578,23 @@ export default function RoadmapTab({
         <div>
           <h3 className={styles.tabMainTitle}>Hoja de Ruta</h3>
           <p className={styles.tabProgressSub}>
-            {currentOps.length} operaciones · {completedOps} completadas · {progressPercent}%
+            {currentOps.length} operaciones · {completedOps} completadas ·{" "}
+            {progressPercent}%
           </p>
         </div>
-        <button
-          type="button"
-          className={styles.btnAddOp}
-          onClick={handleOpenCreateModal}
-        >
-          <Plus size={15} strokeWidth={2.5} /> Operación
-        </button>
+       <button
+  type="button"
+  disabled={readOnly}
+  onClick={handleOpenCreateModal}
+  className={`${styles.btnAddOp} ${readOnly ? styles.btnDisabled : ""}`}
+  title={
+    readOnly
+      ? "No se pueden agregar operaciones en órdenes canceladas o finalizadas"
+      : "Nueva operación"
+  }
+>
+  <Plus size={15} strokeWidth={2.5} /> Operación
+</button>
       </div>
 
       {currentOps.length === 0 ? (
@@ -577,13 +612,15 @@ export default function RoadmapTab({
           {currentOps.map((op) => {
             const currentOption =
               OP_STATUS_OPTIONS.find(
-                (o) => o.value === (op.status || "").toLowerCase()
+                (o) => o.value === (op.status || "").toLowerCase(),
               ) || OP_STATUS_OPTIONS[0];
 
             return (
               <div key={op.id} className={styles.opRow}>
                 <div className={styles.opLeft}>
-                  <GripVertical size={16} className={styles.dragHandle} />
+                  {!readOnly && (
+                    <GripVertical size={16} className={styles.dragHandle} />
+                  )}
                   <div className={styles.opBadgeNumber}>{op.step}</div>
                   <div className={styles.opInfo}>
                     <div className={styles.opNameLine}>
@@ -606,16 +643,23 @@ export default function RoadmapTab({
                   <div className={styles.customSelectWrapper}>
                     <button
                       type="button"
-                      className={styles.customTriggerBtn}
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === op.id ? null : op.id)
-                      }
+                      disabled={readOnly}
+                      className={`${styles.customTriggerBtn} ${
+                        readOnly ? styles.customTriggerBtnDisabled : ""
+                      }`}
+                      onClick={() => {
+                        if (readOnly) return;
+                        setOpenMenuId(openMenuId === op.id ? null : op.id);
+                      }}
+                      title={readOnly ? "Orden finalizada/cancelada: modo lectura" : ""}
                     >
                       <span>{currentOption.label}</span>
-                      <ChevronDown size={14} className={styles.chevronIcon} />
+                      {!readOnly && (
+                        <ChevronDown size={14} className={styles.chevronIcon} />
+                      )}
                     </button>
 
-                    {openMenuId === op.id && (
+                    {!readOnly && openMenuId === op.id && (
                       <div className={styles.customDropdownMenu}>
                         {OP_STATUS_OPTIONS.map((opt) => (
                           <button
@@ -640,24 +684,26 @@ export default function RoadmapTab({
                     )}
                   </div>
 
-                  <div className={styles.rowActions}>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditModal(op)}
-                      className={styles.btnRowAction}
-                      title="Editar operación"
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setToDelete(op)}
-                      className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
-                      title="Eliminar operación"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className={styles.rowActions}>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(op)}
+                        className={styles.btnRowAction}
+                        title="Editar operación"
+                      >
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setToDelete(op)}
+                        className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
+                        title="Eliminar operación"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

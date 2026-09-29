@@ -47,6 +47,13 @@
   opacity: 0.95;
 }
 
+.btnAddOp:disabled {
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Empty State */
 .emptyRoadmapBox {
   display: flex;

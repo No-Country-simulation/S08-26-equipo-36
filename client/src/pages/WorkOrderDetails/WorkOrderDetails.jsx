@@ -17,6 +17,7 @@ import {
   Pencil,
   X,
   Lock,
+  Ban,
 } from "lucide-react";
 import RoadmapTab from "../../components/workOrders/tabs/RoadmapTab/RoadmapTab";
 import DocumentsTab from "../../components/workOrders/tabs/DocumentsTab/DocumentsTab";
@@ -83,18 +84,13 @@ export default function WorkOrderDetails() {
   const [nonConformities, setNonConformities] = useState([]);
   const [activeTab, setActiveTab] = useState("hoja-de-ruta");
 
-  // const [isOtStatusMenuOpen, setIsOtStatusMenuOpen] = useState(false);
-  // const [isFlashing, setIsFlashing] = useState(false);
-
   // Edición inline del Responsable
   const [isEditingResp, setIsEditingResp] = useState(false);
   const [respValue, setRespValue] = useState("");
   const [savingResp, setSavingResp] = useState(false);
 
-  // const otMenuRef = useRef(null);
-
   // Carga inicial y datos vinculados
-useEffect(() => {
+  useEffect(() => {
     let isMounted = true;
 
     const fetchOtDetail = async () => {
@@ -209,17 +205,10 @@ useEffect(() => {
     };
   }, [id]);
 
-  // useEffect(() => {
-  //   const handleClickOutside = (e) => {
-  //     if (otMenuRef.current && !otMenuRef.current.contains(e.target)) {
-  //       setIsOtStatusMenuOpen(false);
-  //     }
-  //   };
-  //   document.addEventListener("mousedown", handleClickOutside);
-  //   return () => document.removeEventListener("mousedown", handleClickOutside);
-  // }, []);
-
-  // --- LÓGICA QUALITY GATE INDUSTRIAL ---
+  // --- REGLAS TERMINALES Y QUALITY GATE INDUSTRIAL ---
+  const isCancelled = ot?.estado === "cancelada";
+  const isDelivered = ot?.estado === "entregada";
+  const isTerminal = isCancelled || isDelivered;
 
   const isMachiningComplete =
     operations.length > 0 &&
@@ -247,28 +236,27 @@ useEffect(() => {
     return st === "abierta" || st === "en_analisis";
   });
 
-  // Cambiar estado con persistencia (estabilizado con useCallback)
   const handleSelectStatus = async (newUiStatus) => {
+    if (isTerminal && newUiStatus !== ot?.estado) return;
+
     const dbStatus = normalizeUiToDbStatus(newUiStatus);
     setOt((prev) => ({
       ...prev,
       estado: newUiStatus,
       estado_actual: dbStatus,
     }));
-    // setIsOtStatusMenuOpen(false);
 
     try {
       if (typeof api.actualizarEstadoOrden === "function") {
         await api.actualizarEstadoOrden(ot?.id, dbStatus);
       }
-      // setIsFlashing(true);
-      // setTimeout(() => setIsFlashing(false), 600);
     } catch (err) {
       console.error("[WorkOrderDetails] Error al actualizar estado:", err);
     }
   };
 
   const handleOpStatusChange = (opId, newStatus) => {
+    if (isTerminal) return;
     setOperations((prev) => {
       const updated = prev.map((o) =>
         o.id === opId ? { ...o, status: newStatus.toLowerCase() } : o,
@@ -279,6 +267,7 @@ useEffect(() => {
   };
 
   const handleAddOperation = (newOp) => {
+    if (isTerminal) return;
     setOperations((prev) => {
       const updated = [
         ...prev,
@@ -290,6 +279,7 @@ useEffect(() => {
   };
 
   const handleUpdateOperation = (opId, updatedData) => {
+    if (isTerminal) return;
     setOperations((prev) => {
       const updated = prev.map((op) =>
         op.id === opId
@@ -306,6 +296,7 @@ useEffect(() => {
   };
 
   const handleDeleteOperation = (opId) => {
+    if (isTerminal) return;
     setOperations((prev) => {
       const updated = prev.filter((op) => op.id !== opId);
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
@@ -314,6 +305,7 @@ useEffect(() => {
   };
 
   const handleQualityChange = async (updatedControls) => {
+    if (isTerminal) return;
     setQualityControls(updatedControls);
 
     const anyRework = updatedControls.some((c) => {
@@ -351,6 +343,7 @@ useEffect(() => {
   };
 
   const handleNcChange = (updatedNcs) => {
+    if (isTerminal) return;
     setNonConformities(updatedNcs);
   };
 
@@ -362,13 +355,14 @@ useEffect(() => {
     correctiveAction,
     status,
   }) => {
+    if (isTerminal) return;
+
     if (severity === "critica") {
       await handleSelectStatus("cancelada");
       return;
     }
     if (status === "cerrada" || status === "corregida") return;
     if (severity === "moderada") {
-      // Evitar ejecuciones simultáneas o duplicadas por StrictMode
       if (isCreatingReworkRef.current) return;
       isCreatingReworkRef.current = true;
       setTimeout(() => {
@@ -377,7 +371,6 @@ useEffect(() => {
 
       const taskDescription = `[Retrabajo] ${correctiveAction || title}`;
 
-      // Evitar crear si ya existe una operación pendiente con la misma tarea
       const alreadyExists = operations.some(
         (op) =>
           (op.name === taskDescription ||
@@ -437,6 +430,7 @@ useEffect(() => {
   };
 
   const handleSaveResponsable = async () => {
+    if (isTerminal) return;
     try {
       setSavingResp(true);
       const cleanVal = respValue.trim();
@@ -507,41 +501,54 @@ useEffect(() => {
             </p>
           </div>
         </div>
-
-        {/* <div className={styles.otStatusWrapper} ref={otMenuRef}>
-          <Settings2 size={16} className={styles.settingsIcon} />
-          <button
-            type="button"
-            className={`${styles.otStatusTriggerBtn} ${
-              isFlashing ? styles.otStatusTriggerFlash : ""
-            }`}
-            onClick={() => setIsOtStatusMenuOpen(!isOtStatusMenuOpen)}
-          >
-            <span>{currentOtStatusObj.label}</span>
-            <ChevronDown size={14} className={styles.chevronIcon} />
-          </button>
-
-          {isOtStatusMenuOpen && (
-            <div className={styles.otStatusDropdownMenu}>
-              {OT_HEADER_STATUSES.map((st) => (
-                <button
-                  key={st.value}
-                  type="button"
-                  className={`${styles.otStatusOptionItem} ${
-                    ot.estado === st.value ? styles.otStatusOptionSelected : ""
-                  }`}
-                  onClick={() => handleSelectStatus(st.value)}
-                >
-                  <span>{st.label}</span>
-                  {ot.estado === st.value && (
-                    <Check size={14} className={styles.checkIcon} />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div> */}
       </div>
+
+      {/* Banner de bloqueo para OT Cancelada */}
+      {isCancelled && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 16px",
+            marginBottom: "16px",
+            borderRadius: "8px",
+            background: "rgba(239, 68, 68, 0.12)",
+            border: "1px solid rgba(239, 68, 68, 0.35)",
+            color: "#f87171",
+            fontSize: "0.875rem",
+          }}
+        >
+          <Ban size={18} style={{ flexShrink: 0 }} />
+          <span>
+            Esta orden de trabajo se encuentra <strong>Cancelada por Scrap</strong>. 
+            El expediente técnico permanece bloqueado en modo de solo lectura para auditoría y trazabilidad histórica.
+          </span>
+        </div>
+      )}
+
+      {isDelivered && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "12px 16px",
+            marginBottom: "16px",
+            borderRadius: "8px",
+            background: "rgba(34, 197, 94, 0.12)",
+            border: "1px solid rgba(34, 197, 94, 0.35)",
+            color: "#4ade80",
+            fontSize: "0.875rem",
+          }}
+        >
+          <Check size={18} style={{ flexShrink: 0 }} />
+          <span>
+            Esta orden de trabajo ha sido <strong>Entregada</strong> al cliente.
+            El expediente se encuentra archivado en modo lectura.
+          </span>
+        </div>
+      )}
 
       <div className={styles.metaGrid}>
         <div className={styles.metaCard}>
@@ -583,22 +590,30 @@ useEffect(() => {
           </p>
         </div>
 
-        {/* Responsable Editable */}
+        {/* Responsable (Bloqueado si está cancelada o entregada) */}
         <div
-          className={`${styles.metaCard} ${!isEditingResp ? styles.metaCardInteractive : ""}`}
+          className={`${styles.metaCard} ${
+            !isEditingResp && !isTerminal ? styles.metaCardInteractive : ""
+          }`}
           onClick={() => {
-            if (!isEditingResp) {
+            if (!isEditingResp && !isTerminal) {
               setRespValue(ot.responsable || "");
               setIsEditingResp(true);
             }
           }}
-          title={!isEditingResp ? "Clic para editar responsable" : ""}
+          title={
+            isTerminal
+              ? "Edición no permitida en órdenes finalizadas o canceladas"
+              : !isEditingResp
+              ? "Clic para editar responsable"
+              : ""
+          }
         >
           <p className={styles.metaLabel}>
             <User size={12} /> Responsable
           </p>
 
-          {isEditingResp ? (
+          {isEditingResp && !isTerminal ? (
             <div
               className={styles.respForm}
               onClick={(e) => e.stopPropagation()}
@@ -638,9 +653,11 @@ useEffect(() => {
           ) : (
             <div className={styles.respValueWrapper}>
               <span className={styles.metaValue}>{ot.responsable || "—"}</span>
-              <span className={styles.editIconBtn}>
-                <Pencil size={11} />
-              </span>
+              {!isTerminal && (
+                <span className={styles.editIconBtn}>
+                  <Pencil size={11} />
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -669,8 +686,9 @@ useEffect(() => {
           let isTabBlocked = false;
           let blockTitle = "";
 
-          // Gate 1: Calidad y NC se bloquean si la fabricación no concluyó al 100%
-          if (tab.id === "calidad" || tab.id === "nc") {
+          // Gate 1: Calidad y NC se bloquean durante fabricación normal si no concluyó al 100%
+          // (Si la OT está cancelada, permitimos visualización de auditoría pero en solo lectura)
+          if ((tab.id === "calidad" || tab.id === "nc") && !isCancelled) {
             if (!isMachiningComplete) {
               isTabBlocked = true;
               blockTitle =
@@ -678,9 +696,9 @@ useEffect(() => {
             }
           }
 
-          // Gate 2: Entrega se bloquea si hay retrabajo, rechazo, NC abierta o cancelada
+          // Gate 2: Entrega se bloquea si la orden fue cancelada, rechazada, o si hay retrabajo/NC abierta
           if (tab.id === "entrega") {
-            if (ot.estado === "cancelada") {
+            if (isCancelled) {
               isTabBlocked = true;
               blockTitle =
                 "Pestaña bloqueada: La orden fue cancelada por defecto crítico (Scrap). Pieza descartada.";
@@ -730,18 +748,22 @@ useEffect(() => {
             otId={ot.id}
             ot={ot}
             operations={operations}
+            readOnly={isTerminal}
             onOpStatusChange={handleOpStatusChange}
             onAddOperation={handleAddOperation}
             onUpdateOperation={handleUpdateOperation}
             onDeleteOperation={handleDeleteOperation}
           />
         )}
-        {activeTab === "documentacion" && <DocumentsTab otId={ot.id} ot={ot} />}
+        {activeTab === "documentacion" && (
+          <DocumentsTab otId={ot.id} ot={ot} readOnly={isTerminal} />
+        )}
         {activeTab === "calidad" && (
           <QualityTab
             otId={ot.id}
             ot={ot}
             operations={operations}
+            readOnly={isTerminal}
             onControlsChange={handleQualityChange}
           />
         )}
@@ -750,11 +772,14 @@ useEffect(() => {
             otId={ot.id}
             ot={ot}
             operations={operations}
+            readOnly={isTerminal}
             onNcChange={handleNcChange}
             onReworkTrigger={handleNcReworkTrigger}
           />
         )}
-        {activeTab === "entrega" && <DeliveryTab otId={ot.id} ot={ot} />}
+        {activeTab === "entrega" && (
+          <DeliveryTab otId={ot.id} ot={ot} readOnly={isTerminal} />
+        )}
       </div>
     </div>
   );

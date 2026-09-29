@@ -364,10 +364,14 @@ function QualityControlModal({
   );
 }
 
-export default function QualityTab({ otId, ot, onControlsChange }) {
+export default function QualityTab({
+  otId,
+  ot,
+  readOnly = false,
+  onControlsChange,
+}) {
   const { id } = useParams();
 
-  // Priorizamos siempre el id numérico del objeto ot para blindar contra el 404
   const currentOtId = ot?.id_ot || ot?.id || otId || id;
 
   const [controls, setControls] = useState([]);
@@ -451,18 +455,21 @@ export default function QualityTab({ otId, ot, onControlsChange }) {
   }, [loadControls, loadDbOperations]);
 
   const handleOpenCreateModal = () => {
+    if (readOnly) return;
     loadDbOperations();
     setEditingControl(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (control) => {
+    if (readOnly) return;
     loadDbOperations();
     setEditingControl(control);
     setIsModalOpen(true);
   };
 
   const handleSaveModal = async (formData) => {
+    if (readOnly) return;
     const payloadBackend = {
       tipo: formData.type.toLowerCase(),
       resultado: formData.resultado.toLowerCase(),
@@ -492,7 +499,7 @@ export default function QualityTab({ otId, ot, onControlsChange }) {
   };
 
   const confirmDelete = async () => {
-    if (!toDelete) return;
+    if (!toDelete || readOnly) return;
     try {
       if (typeof api.eliminarControlOrden === "function") {
         await api.eliminarControlOrden(toDelete.id);
@@ -541,13 +548,19 @@ export default function QualityTab({ otId, ot, onControlsChange }) {
             {controls.length} controles registrados
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleOpenCreateModal}
-          className={styles.btnAddControl}
-        >
-          <Plus size={15} strokeWidth={2.5} /> Control
-        </button>
+       <button
+  type="button"
+  disabled={readOnly}
+  onClick={handleOpenCreateModal}
+  className={`${styles.btnAddControl} ${readOnly ? styles.btnDisabled : ""}`}
+  title={
+    readOnly
+      ? "No se pueden registrar controles en órdenes canceladas o finalizadas"
+      : "Registrar control"
+  }
+>
+  <Plus size={15} strokeWidth={2.5} /> Control
+</button>
       </div>
 
       {controls.length === 0 ? (
@@ -604,24 +617,26 @@ export default function QualityTab({ otId, ot, onControlsChange }) {
                 )}
               </div>
 
-              <div className={styles.rowActions}>
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditModal(item)}
-                  className={styles.btnRowAction}
-                  title="Editar control"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setToDelete(item)}
-                  className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
-                  title="Eliminar control"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
+              {!readOnly && (
+                <div className={styles.rowActions}>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEditModal(item)}
+                    className={styles.btnRowAction}
+                    title="Editar control"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setToDelete(item)}
+                    className={`${styles.btnRowAction} ${styles.btnRowDelete}`}
+                    title="Eliminar control"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
