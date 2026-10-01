@@ -2,7 +2,6 @@ import os
 import socket
 import smtplib
 import ssl
-import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Blueprint, request, jsonify
@@ -30,37 +29,36 @@ LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Ima
 
 def conectar_servidor_smtp():
     """
-    Conecta por SSL forzando resolución IPv4 pura para evitar 
-    [Errno 101] Network is unreachable en los contenedores de Render,
-    manteniendo la validación de nombre de dominio de Gmail.
+    Fuerza a socket.getaddrinfo a devolver exclusivamente IPv4
+    para evitar [Errno 101] en Render y conecta limpiamente a smtp.gmail.com:465.
     """
-    puerto = int(SMTP_PORT)
-    host_canonica = (SMTP_SERVER or "smtp.gmail.com").strip()
+    # Guardamos la función original de resolución
+    orig_getaddrinfo = socket.getaddrinfo
 
-    # 1. Resolver estrictamente la IP v4
-    ip_v4 = host_canonica
+    def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+        # Forzar únicamente la familia AF_INET (IPv4)
+        return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+    # Parche temporal de resolución durante la conexión
+    socket.getaddrinfo = getaddrinfo_ipv4_only
+
     try:
-        direcciones = socket.getaddrinfo(host_canonica, puerto, socket.AF_INET, socket.SOCK_STREAM)
-        if direcciones:
-            ip_v4 = direcciones[0][4][0]
-    except Exception as e:
-        print(f"[Aviso DNS IPv4]: {e}")
+        puerto = int(SMTP_PORT)
+        host = (SMTP_SERVER or "smtp.gmail.com").strip()
 
-    # 2. Crear contexto SSL oficial
-    contexto = ssl.create_default_context()
+        contexto = ssl.create_default_context()
 
-    # 3. Conectar a la IP v4 pero validando contra el dominio oficial de Google
-    if puerto == 465:
-        sock_crudo = socket.create_connection((ip_v4, puerto), timeout=15)
-        sock_seguro = contexto.wrap_socket(sock_crudo, server_hostname=host_canonica)
-        server = smtplib.SMTP_SSL(host_canonica, puerto, timeout=15)
-        server.sock = sock_seguro
-    else:
-        server = smtplib.SMTP(ip_v4, puerto, timeout=15)
-        server.starttls(context=contexto)
+        if puerto == 465:
+            server = smtplib.SMTP_SSL(host, puerto, context=contexto, timeout=25)
+        else:
+            server = smtplib.SMTP(host, puerto, timeout=25)
+            server.starttls(context=contexto)
 
-    server.login(SMTP_USER, SMTP_PASS)
-    return server
+        server.login(SMTP_USER, SMTP_PASS)
+        return server
+    finally:
+        # Restaurar la función DNS original
+        socket.getaddrinfo = orig_getaddrinfo
 
 
 # --- TEMPLATE: TRACKING DE ORDEN DE TRABAJO ---
