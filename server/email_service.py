@@ -1,6 +1,7 @@
 import os
 import socket
 import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Blueprint, request, jsonify
@@ -28,23 +29,18 @@ LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Ima
 
 def conectar_servidor_smtp():
     """
-    Establece conexión SMTP forzando la resolución de IPv4 
-    para evitar '[Errno 101] Network is unreachable' en Render.
+    Establece conexión directa y segura con el servidor SMTP de Gmail (puerto 465 SSL).
     """
-    server_host = SMTP_SERVER
-    try:
-        # Resolver únicamente direcciones de la familia IPv4 (AF_INET)
-        addr_info = socket.getaddrinfo(SMTP_SERVER, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
-        if addr_info:
-            server_host = addr_info[0][4][0]
-    except Exception as exc:
-        print(f"[Aviso DNS IPv4] {exc}")
+    puerto = int(SMTP_PORT)
+    host = (SMTP_SERVER or "smtp.gmail.com").strip()
 
-    if SMTP_PORT == 465:
-        server = smtplib.SMTP_SSL(server_host, SMTP_PORT, timeout=15)
+    contexto_ssl = ssl.create_default_context()
+
+    if puerto == 465:
+        server = smtplib.SMTP_SSL(host, puerto, context=contexto_ssl, timeout=20)
     else:
-        server = smtplib.SMTP(server_host, SMTP_PORT, timeout=15)
-        server.starttls()
+        server = smtplib.SMTP(host, puerto, timeout=20)
+        server.starttls(context=contexto_ssl)
 
     server.login(SMTP_USER, SMTP_PASS)
     return server
