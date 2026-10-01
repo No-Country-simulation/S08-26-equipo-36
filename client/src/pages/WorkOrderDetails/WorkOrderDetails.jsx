@@ -211,18 +211,18 @@ export default function WorkOrderDetails() {
   const isTerminal = isCancelled || isDelivered;
 
   // Estado calculado dinámicamente según la Hoja de Ruta
-  const hasStartedMachining = operations.some((op) => {
-    const st = (op.status || op.estado || "").toLowerCase();
-    return st === "en proceso" || st === "completada";
+const hasStartedMachining = operations.some((op) => {
+    const st = (op.status || op.estado || "").toLowerCase().trim();
+    return st === "en proceso" || st === "completada" || st === "en_proceso";
   });
 
-  // Si no está cancelada/entregada/liberada y ya inició operaciones, es "mecanizado"
+  // Estado reactivo bidireccional
   const computedStatus =
     isTerminal || ot?.estado === "liberada" || ot?.estado === "calidad"
       ? ot?.estado
       : hasStartedMachining
       ? "mecanizado"
-      : ot?.estado || "creada";
+      : "creada";
 
   const isMachiningComplete =
     operations.length > 0 &&
@@ -269,17 +269,34 @@ export default function WorkOrderDetails() {
     }
   };
 
-  // --- SINCRONIZACIÓN AUTOMÁTICA DE ESTADO SEGÚN HOJA DE RUTA ---
-useEffect(() => {
-    if (!ot?.id || isTerminal) return;
+// --- SINCRONIZACIÓN AUTOMÁTICA CON BACKEND (BIDIRECCIONAL) ---
+  useEffect(() => {
+    if (
+      !ot?.id ||
+      isTerminal ||
+      ot.estado === "liberada" ||
+      ot.estado === "calidad"
+    )
+      return;
 
-    if (computedStatus === "mecanizado" && ot.estado === "creada") {
-      // Notificar al backend sin disparar setOt sincrónico
-      const dbStatus = normalizeUiToDbStatus("mecanizado");
+    if (computedStatus !== ot.estado) {
+      const dbStatus = normalizeUiToDbStatus(computedStatus);
       if (typeof api.actualizarEstadoOrden === "function") {
-        api.actualizarEstadoOrden(ot.id, dbStatus).catch((err) => {
-          console.error("[WorkOrderDetails] Error sincronizando estado:", err);
-        });
+        api
+          .actualizarEstadoOrden(ot.id, dbStatus)
+          .then(() => {
+            setOt((prev) =>
+              prev
+                ? { ...prev, estado: computedStatus, estado_actual: dbStatus }
+                : prev,
+            );
+          })
+          .catch((err) => {
+            console.error(
+              "[WorkOrderDetails] Error sincronizando estado bidireccional:",
+              err,
+            );
+          });
       }
     }
   }, [computedStatus, ot?.id, ot?.estado, isTerminal]);
