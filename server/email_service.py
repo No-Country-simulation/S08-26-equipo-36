@@ -49,7 +49,7 @@ def render_email_template(cliente, ot_numero, pieza, tracking_url):
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }}
     .header {{
-      background-color: #0B0F19;
+      background-color: #080C16; 
       padding: 24px;
       text-align: center;
     }}
@@ -101,7 +101,7 @@ def render_email_template(cliente, ot_numero, pieza, tracking_url):
     .btn {{
       display: inline-block;
       background-color: #f59e0b;
-      color: #0b0f19 !important;
+      color: #080C16 !important;
       font-weight: 700;
       font-size: 14px;
       text-decoration: none;
@@ -183,7 +183,7 @@ def render_inquiry_reply_template(cliente, consulta_original, mensaje_respuesta)
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }}
     .header {{
-      background-color: #0B0F19;
+      background-color: #080C16;
       padding: 24px;
       text-align: center;
     }}
