@@ -18,80 +18,45 @@ if os.path.exists(env_file):
 
 email_bp = Blueprint('email_bp', __name__)
 
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 465))
-SMTP_USER = os.environ.get("SMTP_USER", "")
-SMTP_PASS = os.environ.get("SMTP_PASS", "")
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com").strip()
+SMTP_PORT = 465
+SMTP_USER = os.environ.get("SMTP_USER", "").strip()
+SMTP_PASS = os.environ.get("SMTP_PASS", "").strip()
 
-# URL del logo entregado en PNG por Cloudinary para compatibilidad universal de correo
 LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Imagotipo-Sidebar.png"
 
 
 def despachar_correo_seguro(destinatario, asunto, html_content):
     """
-    Envía correo resolviendo la IP IPv4 oficial de smtp.gmail.com
-    para sortear la ausencia de ruteo IPv6 en los entornos de Render.
+    Envía correo exclusivamente por SSL directo en el puerto 465,
+    forzando la resolución de smtp.gmail.com a IPv4 para evitar el error 101 en Render.
     """
-    # 1. Obtener dirección IPv4 directa
-    host_target = SMTP_SERVER.strip() or "smtp.gmail.com"
-    ip_ipv4 = None
+    # Guardar el getaddrinfo original del sistema
+    orig_getaddrinfo = socket.getaddrinfo
+
+    def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+        # Obligar a devolver solo sockets IPv4 (AF_INET)
+        return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+    # Aplicar parche IPv4 durante la apertura del socket
+    socket.getaddrinfo = getaddrinfo_ipv4_only
+
     try:
-        direcciones = socket.getaddrinfo(host_target, 465, socket.AF_INET, socket.SOCK_STREAM)
-        if direcciones:
-            ip_ipv4 = direcciones[0][4][0]
-    except Exception as exc:
-        print(f"[DNS IPv4 Lookup Info]: {exc}")
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = asunto
+        msg["From"] = f"QualityTrack <{SMTP_USER}>"
+        msg["To"] = destinatario
+        msg.attach(MIMEText(html_content, "html"))
 
-    # 2. Configurar mensaje MIME
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = asunto
-    msg["From"] = f"QualityTrack <{SMTP_USER}>"
-    msg["To"] = destinatario
-    msg.attach(MIMEText(html_content, "html"))
-
-    contexto = ssl.create_default_context()
-    servidor_conectado = False
-    ultimo_error = None
-
-    # Intento Primario: Puerto 465 SSL
-    for host_intento in ([ip_ipv4, host_target] if ip_ipv4 else [host_target]):
-        if not host_intento:
-            continue
-        try:
-            # Si conectamos por IP numérica evitamos falla de matching de certificado
-            if host_intento == ip_ipv4:
-                contexto_ip = ssl.create_default_context()
-                contexto_ip.check_hostname = False
-                contexto_ip.verify_mode = ssl.CERT_NONE
-                server = smtplib.SMTP_SSL(host_intento, 465, context=contexto_ip, timeout=12)
-            else:
-                server = smtplib.SMTP_SSL(host_intento, 465, context=contexto, timeout=12)
-
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_USER, destinatario, msg.as_string())
-            server.quit()
-            servidor_conectado = True
-            break
-        except Exception as e:
-            ultimo_error = e
-
-    # Intento Secundario: Puerto 587 STARTTLS (si el 465 fue bloqueado por firewall)
-    if not servidor_conectado:
-        try:
-            target = ip_ipv4 if ip_ipv4 else host_target
-            server = smtplib.SMTP(target, 587, timeout=12)
-            server.ehlo()
-            server.starttls(context=contexto)
-            server.ehlo()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_USER, destinatario, msg.as_string())
-            server.quit()
-            servidor_conectado = True
-        except Exception as e:
-            ultimo_error = e
-
-    if not servidor_conectado:
-        raise RuntimeError(f"Error de enlace SMTP en Render: {ultimo_error}")
+        contexto = ssl.create_default_context()
+        # Conexión directa con SSL a smtp.gmail.com:465
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, context=contexto, timeout=15)
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, destinatario, msg.as_string())
+        server.quit()
+    finally:
+        # Restaurar getaddrinfo de inmediato
+        socket.getaddrinfo = orig_getaddrinfo
 
 
 # --- TEMPLATE: TRACKING DE ORDEN DE TRABAJO ---
