@@ -27,38 +27,71 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "")
 LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Imagotipo-Sidebar.png"
 
 
-def conectar_servidor_smtp():
+def despachar_correo_seguro(destinatario, asunto, html_content):
     """
-    Fuerza a socket.getaddrinfo a devolver exclusivamente IPv4
-    para evitar [Errno 101] en Render y conecta limpiamente a smtp.gmail.com:465.
+    Envía correo resolviendo la IP IPv4 oficial de smtp.gmail.com
+    para sortear la ausencia de ruteo IPv6 en los entornos de Render.
     """
-    # Guardamos la función original de resolución
-    orig_getaddrinfo = socket.getaddrinfo
-
-    def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
-        # Forzar únicamente la familia AF_INET (IPv4)
-        return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-    # Parche temporal de resolución durante la conexión
-    socket.getaddrinfo = getaddrinfo_ipv4_only
-
+    # 1. Obtener dirección IPv4 directa
+    host_target = SMTP_SERVER.strip() or "smtp.gmail.com"
+    ip_ipv4 = None
     try:
-        puerto = int(SMTP_PORT)
-        host = (SMTP_SERVER or "smtp.gmail.com").strip()
+        direcciones = socket.getaddrinfo(host_target, 465, socket.AF_INET, socket.SOCK_STREAM)
+        if direcciones:
+            ip_ipv4 = direcciones[0][4][0]
+    except Exception as exc:
+        print(f"[DNS IPv4 Lookup Info]: {exc}")
 
-        contexto = ssl.create_default_context()
+    # 2. Configurar mensaje MIME
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = asunto
+    msg["From"] = f"QualityTrack <{SMTP_USER}>"
+    msg["To"] = destinatario
+    msg.attach(MIMEText(html_content, "html"))
 
-        if puerto == 465:
-            server = smtplib.SMTP_SSL(host, puerto, context=contexto, timeout=25)
-        else:
-            server = smtplib.SMTP(host, puerto, timeout=25)
+    contexto = ssl.create_default_context()
+    servidor_conectado = False
+    ultimo_error = None
+
+    # Intento Primario: Puerto 465 SSL
+    for host_intento in ([ip_ipv4, host_target] if ip_ipv4 else [host_target]):
+        if not host_intento:
+            continue
+        try:
+            # Si conectamos por IP numérica evitamos falla de matching de certificado
+            if host_intento == ip_ipv4:
+                contexto_ip = ssl.create_default_context()
+                contexto_ip.check_hostname = False
+                contexto_ip.verify_mode = ssl.CERT_NONE
+                server = smtplib.SMTP_SSL(host_intento, 465, context=contexto_ip, timeout=12)
+            else:
+                server = smtplib.SMTP_SSL(host_intento, 465, context=contexto, timeout=12)
+
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, destinatario, msg.as_string())
+            server.quit()
+            servidor_conectado = True
+            break
+        except Exception as e:
+            ultimo_error = e
+
+    # Intento Secundario: Puerto 587 STARTTLS (si el 465 fue bloqueado por firewall)
+    if not servidor_conectado:
+        try:
+            target = ip_ipv4 if ip_ipv4 else host_target
+            server = smtplib.SMTP(target, 587, timeout=12)
+            server.ehlo()
             server.starttls(context=contexto)
+            server.ehlo()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_USER, destinatario, msg.as_string())
+            server.quit()
+            servidor_conectado = True
+        except Exception as e:
+            ultimo_error = e
 
-        server.login(SMTP_USER, SMTP_PASS)
-        return server
-    finally:
-        # Restaurar la función DNS original
-        socket.getaddrinfo = orig_getaddrinfo
+    if not servidor_conectado:
+        raise RuntimeError(f"Error de enlace SMTP en Render: {ultimo_error}")
 
 
 # --- TEMPLATE: TRACKING DE ORDEN DE TRABAJO ---
@@ -339,17 +372,9 @@ def enviar_tracking_email():
             }), 200
 
         html_content = render_email_template(cliente, ot_numero, pieza, tracking_url)
+        asunto = f"QualityTrack - Seguimiento Orden de Trabajo {ot_numero}"
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"QualityTrack - Seguimiento Orden de Trabajo {ot_numero}"
-        msg["From"] = f"QualityTrack <{SMTP_USER}>"
-        msg["To"] = destinatario
-        msg.attach(MIMEText(html_content, "html"))
-
-        server = conectar_servidor_smtp()
-        server.sendmail(SMTP_USER, destinatario, msg.as_string())
-        server.quit()
-
+        despachar_correo_seguro(destinatario, asunto, html_content)
         return jsonify({"status": "success", "message": "Correo enviado con éxito"}), 200
 
     except Exception as e:
@@ -386,16 +411,7 @@ def responder_inquiry_email():
 
         html_content = render_inquiry_reply_template(cliente, consulta_original, mensaje)
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = asunto
-        msg["From"] = f"QualityTrack <{SMTP_USER}>"
-        msg["To"] = destinatario
-        msg.attach(MIMEText(html_content, "html"))
-
-        server = conectar_servidor_smtp()
-        server.sendmail(SMTP_USER, destinatario, msg.as_string())
-        server.quit()
-
+        despachar_correo_seguro(destinatario, asunto, html_content)
         return jsonify({"status": "success", "message": "Correo enviado con éxito"}), 200
 
     except Exception as e:
