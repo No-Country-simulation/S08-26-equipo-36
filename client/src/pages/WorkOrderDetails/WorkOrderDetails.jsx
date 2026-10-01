@@ -205,10 +205,24 @@ export default function WorkOrderDetails() {
     };
   }, [id]);
 
-  // --- REGLAS TERMINALES Y QUALITY GATE INDUSTRIAL ---
+// --- REGLAS TERMINALES Y QUALITY GATE INDUSTRIAL ---
   const isCancelled = ot?.estado === "cancelada";
   const isDelivered = ot?.estado === "entregada";
   const isTerminal = isCancelled || isDelivered;
+
+  // Estado calculado dinámicamente según la Hoja de Ruta
+  const hasStartedMachining = operations.some((op) => {
+    const st = (op.status || op.estado || "").toLowerCase();
+    return st === "en proceso" || st === "completada";
+  });
+
+  // Si no está cancelada/entregada/liberada y ya inició operaciones, es "mecanizado"
+  const computedStatus =
+    isTerminal || ot?.estado === "liberada" || ot?.estado === "calidad"
+      ? ot?.estado
+      : hasStartedMachining
+      ? "mecanizado"
+      : ot?.estado || "creada";
 
   const isMachiningComplete =
     operations.length > 0 &&
@@ -247,35 +261,68 @@ export default function WorkOrderDetails() {
     }));
 
     try {
-      if (typeof api.actualizarEstadoOrden === "function") {
-        await api.actualizarEstadoOrden(ot?.id, dbStatus);
+      if (typeof api.actualizarEstadoOrden === "function" && ot?.id) {
+        await api.actualizarEstadoOrden(ot.id, dbStatus);
       }
     } catch (err) {
       console.error("[WorkOrderDetails] Error al actualizar estado:", err);
     }
   };
 
-  const handleOpStatusChange = (opId, newStatus) => {
+  // --- SINCRONIZACIÓN AUTOMÁTICA DE ESTADO SEGÚN HOJA DE RUTA ---
+useEffect(() => {
+    if (!ot?.id || isTerminal) return;
+
+    if (computedStatus === "mecanizado" && ot.estado === "creada") {
+      // Notificar al backend sin disparar setOt sincrónico
+      const dbStatus = normalizeUiToDbStatus("mecanizado");
+      if (typeof api.actualizarEstadoOrden === "function") {
+        api.actualizarEstadoOrden(ot.id, dbStatus).catch((err) => {
+          console.error("[WorkOrderDetails] Error sincronizando estado:", err);
+        });
+      }
+    }
+  }, [computedStatus, ot?.id, ot?.estado, isTerminal]);
+
+  const handleOpStatusChange = async (opId, newStatus) => {
     if (isTerminal) return;
+    const statusLower = newStatus.toLowerCase();
+
     setOperations((prev) => {
       const updated = prev.map((o) =>
-        o.id === opId ? { ...o, status: newStatus.toLowerCase() } : o,
+        o.id === opId ? { ...o, status: statusLower } : o,
       );
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
+
+    if (
+      ot?.estado === "creada" &&
+      (statusLower === "en proceso" || statusLower === "completada")
+    ) {
+      await handleSelectStatus("mecanizado");
+    }
   };
 
-  const handleAddOperation = (newOp) => {
+  const handleAddOperation = async (newOp) => {
     if (isTerminal) return;
+    const opStatus = (newOp.status || "pendiente").toLowerCase();
+
     setOperations((prev) => {
       const updated = [
         ...prev,
-        { ...newOp, status: (newOp.status || "pendiente").toLowerCase() },
+        { ...newOp, status: opStatus },
       ];
       localStorage.setItem(`qt_ops_${ot?.id || id}`, JSON.stringify(updated));
       return updated;
     });
+
+    if (
+      ot?.estado === "creada" &&
+      (opStatus === "en proceso" || opStatus === "completada")
+    ) {
+      await handleSelectStatus("mecanizado");
+    }
   };
 
   const handleUpdateOperation = (opId, updatedData) => {
@@ -459,8 +506,8 @@ export default function WorkOrderDetails() {
     );
   }
 
-  const currentOtStatusObj =
-    OT_HEADER_STATUSES.find((s) => s.value === (ot.estado || "creada")) ||
+const currentOtStatusObj =
+    OT_HEADER_STATUSES.find((s) => s.value === computedStatus) ||
     OT_HEADER_STATUSES[0];
 
   return (
@@ -590,7 +637,7 @@ export default function WorkOrderDetails() {
           </p>
         </div>
 
-        {/* Responsable (Bloqueado si está cancelada o entregada) */}
+        {/* Responsable */}
         <div
           className={`${styles.metaCard} ${
             !isEditingResp && !isTerminal ? styles.metaCardInteractive : ""
@@ -686,8 +733,6 @@ export default function WorkOrderDetails() {
           let isTabBlocked = false;
           let blockTitle = "";
 
-          // Gate 1: Calidad y NC se bloquean durante fabricación normal si no concluyó al 100%
-          // (Si la OT está cancelada, permitimos visualización de auditoría pero en solo lectura)
           if ((tab.id === "calidad" || tab.id === "nc") && !isCancelled) {
             if (!isMachiningComplete) {
               isTabBlocked = true;
@@ -696,7 +741,6 @@ export default function WorkOrderDetails() {
             }
           }
 
-          // Gate 2: Entrega se bloquea si la orden fue cancelada, rechazada, o si hay retrabajo/NC abierta
           if (tab.id === "entrega") {
             if (isCancelled) {
               isTabBlocked = true;
