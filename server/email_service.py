@@ -2,6 +2,7 @@ import os
 import socket
 import smtplib
 import ssl
+import socket
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Blueprint, request, jsonify
@@ -29,18 +30,34 @@ LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Ima
 
 def conectar_servidor_smtp():
     """
-    Establece conexión directa y segura con el servidor SMTP de Gmail (puerto 465 SSL).
+    Conecta por SSL forzando resolución IPv4 pura para evitar 
+    [Errno 101] Network is unreachable en los contenedores de Render,
+    manteniendo la validación de nombre de dominio de Gmail.
     """
     puerto = int(SMTP_PORT)
-    host = (SMTP_SERVER or "smtp.gmail.com").strip()
+    host_canonica = (SMTP_SERVER or "smtp.gmail.com").strip()
 
-    contexto_ssl = ssl.create_default_context()
+    # 1. Resolver estrictamente la IP v4
+    ip_v4 = host_canonica
+    try:
+        direcciones = socket.getaddrinfo(host_canonica, puerto, socket.AF_INET, socket.SOCK_STREAM)
+        if direcciones:
+            ip_v4 = direcciones[0][4][0]
+    except Exception as e:
+        print(f"[Aviso DNS IPv4]: {e}")
 
+    # 2. Crear contexto SSL oficial
+    contexto = ssl.create_default_context()
+
+    # 3. Conectar a la IP v4 pero validando contra el dominio oficial de Google
     if puerto == 465:
-        server = smtplib.SMTP_SSL(host, puerto, context=contexto_ssl, timeout=20)
+        sock_crudo = socket.create_connection((ip_v4, puerto), timeout=15)
+        sock_seguro = contexto.wrap_socket(sock_crudo, server_hostname=host_canonica)
+        server = smtplib.SMTP_SSL(host_canonica, puerto, timeout=15)
+        server.sock = sock_seguro
     else:
-        server = smtplib.SMTP(host, puerto, timeout=20)
-        server.starttls(context=contexto_ssl)
+        server = smtplib.SMTP(ip_v4, puerto, timeout=15)
+        server.starttls(context=contexto)
 
     server.login(SMTP_USER, SMTP_PASS)
     return server
