@@ -1,4 +1,5 @@
 import os
+import socket
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -17,12 +18,36 @@ if os.path.exists(env_file):
 email_bp = Blueprint('email_bp', __name__)
 
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 465))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 
 # URL del logo entregado en PNG por Cloudinary para compatibilidad universal de correo
 LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Imagotipo-Sidebar.png"
+
+
+def conectar_servidor_smtp():
+    """
+    Establece conexión SMTP forzando la resolución de IPv4 
+    para evitar '[Errno 101] Network is unreachable' en Render.
+    """
+    server_host = SMTP_SERVER
+    try:
+        # Resolver únicamente direcciones de la familia IPv4 (AF_INET)
+        addr_info = socket.getaddrinfo(SMTP_SERVER, SMTP_PORT, socket.AF_INET, socket.SOCK_STREAM)
+        if addr_info:
+            server_host = addr_info[0][4][0]
+    except Exception as exc:
+        print(f"[Aviso DNS IPv4] {exc}")
+
+    if SMTP_PORT == 465:
+        server = smtplib.SMTP_SSL(server_host, SMTP_PORT, timeout=15)
+    else:
+        server = smtplib.SMTP(server_host, SMTP_PORT, timeout=15)
+        server.starttls()
+
+    server.login(SMTP_USER, SMTP_PASS)
+    return server
 
 
 # --- TEMPLATE: TRACKING DE ORDEN DE TRABAJO ---
@@ -124,7 +149,7 @@ def render_email_template(cliente, ot_numero, pieza, tracking_url):
       <img 
         src="{LOGO_URL}" 
         alt="QualityTrack" 
-        width="180"
+        width="180" 
         style="display: block; margin: 0 auto; max-width: 180px; height: auto; border: 0;"
       />
       <div class="header-sub">Trazabilidad y Control de Calidad</div>
@@ -183,7 +208,7 @@ def render_inquiry_reply_template(cliente, consulta_original, mensaje_respuesta)
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }}
     .header {{
-      background-color: #080C16;
+      background-color: #080c16;
       padding: 24px;
       text-align: center;
     }}
@@ -247,7 +272,7 @@ def render_inquiry_reply_template(cliente, consulta_original, mensaje_respuesta)
       <img 
         src="{LOGO_URL}" 
         alt="QualityTrack" 
-        width="180"
+        width="180" 
         style="display: block; margin: 0 auto; max-width: 180px; height: auto; border: 0;"
       />
       <div class="header-sub">Atención Comercial y Técnica</div>
@@ -287,7 +312,7 @@ def enviar_tracking_email():
         ot_numero = datos.get('numero')
         cliente = datos.get('cliente') or 'Estimado cliente'
         pieza = datos.get('pieza') or 'Pieza mecanizada'
-        tracking_url = datos.get('tracking_url') or f"http://localhost:5173/seguimiento?ot={ot_numero}"
+        tracking_url = datos.get('tracking_url') or f"https://s08-26-equipo-36.vercel.app/seguimiento?ot={ot_numero}"
 
         if not destinatario or not ot_numero:
             return jsonify({
@@ -310,13 +335,7 @@ def enviar_tracking_email():
         msg["To"] = destinatario
         msg.attach(MIMEText(html_content, "html"))
 
-        if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=15)
-        else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15)
-            server.starttls()
-
-        server.login(SMTP_USER, SMTP_PASS)
+        server = conectar_servidor_smtp()
         server.sendmail(SMTP_USER, destinatario, msg.as_string())
         server.quit()
 
@@ -362,13 +381,7 @@ def responder_inquiry_email():
         msg["To"] = destinatario
         msg.attach(MIMEText(html_content, "html"))
 
-        if SMTP_PORT == 465:
-            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=15)
-        else:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=15)
-            server.starttls()
-
-        server.login(SMTP_USER, SMTP_PASS)
+        server = conectar_servidor_smtp()
         server.sendmail(SMTP_USER, destinatario, msg.as_string())
         server.quit()
 
