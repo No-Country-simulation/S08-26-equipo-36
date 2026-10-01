@@ -2,6 +2,7 @@ import os
 import socket
 import smtplib
 import ssl
+import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from flask import Blueprint, request, jsonify
@@ -26,19 +27,16 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "").strip()
 LOGO_URL = "https://res.cloudinary.com/carina-bosio/image/upload/v1790221447/Imagotipo-Sidebar.png"
 
 
-def despachar_correo_seguro(destinatario, asunto, html_content):
+def _ejecutar_envio_smtp(destinatario, asunto, html_content):
     """
-    Envía correo exclusivamente por SSL directo en el puerto 465,
-    forzando la resolución de smtp.gmail.com a IPv4 para evitar el error 101 en Render.
+    Rutina de envío asíncrona en hilo separado para no bloquear a Gunicorn.
+    Conecta exclusivamente por SSL (465) forzando resolución IPv4.
     """
-    # Guardar el getaddrinfo original del sistema
     orig_getaddrinfo = socket.getaddrinfo
 
     def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
-        # Obligar a devolver solo sockets IPv4 (AF_INET)
         return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
 
-    # Aplicar parche IPv4 durante la apertura del socket
     socket.getaddrinfo = getaddrinfo_ipv4_only
 
     try:
@@ -49,14 +47,31 @@ def despachar_correo_seguro(destinatario, asunto, html_content):
         msg.attach(MIMEText(html_content, "html"))
 
         contexto = ssl.create_default_context()
-        # Conexión directa con SSL a smtp.gmail.com:465
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, context=contexto, timeout=15)
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, context=contexto, timeout=20)
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(SMTP_USER, destinatario, msg.as_string())
         server.quit()
+        print(f"[SMTP Success] Correo despachado exitosamente a: {destinatario}")
+    except Exception as exc:
+        print(f"[SMTP Error Background]: {exc}")
     finally:
-        # Restaurar getaddrinfo de inmediato
         socket.getaddrinfo = orig_getaddrinfo
+
+
+def despachar_correo_background(destinatario, asunto, html_content):
+    """
+    Lanza el envío en un hilo secundario para devolver respuesta inmediata al navegador.
+    """
+    if not SMTP_USER or not SMTP_PASS:
+        print(f"[AVISO SMTP] Credenciales no configuradas. Simulación para: {destinatario}")
+        return
+
+    hilo = threading.Thread(
+        target=_ejecutar_envio_smtp, 
+        args=(destinatario, asunto, html_content),
+        daemon=True
+    )
+    hilo.start()
 
 
 # --- TEMPLATE: TRACKING DE ORDEN DE TRABAJO ---
@@ -329,21 +344,19 @@ def enviar_tracking_email():
                 "message": "Destinatario y número de OT son obligatorios"
             }), 400
 
-        if not SMTP_USER or not SMTP_PASS:
-            print(f"\n[AVISO SMTP] Modo simulación activo. Notificación para: {destinatario} | OT: {ot_numero}")
-            return jsonify({
-                "status": "success", 
-                "message": "Correo enviado con éxito (modo simulación)"
-            }), 200
-
         html_content = render_email_template(cliente, ot_numero, pieza, tracking_url)
         asunto = f"QualityTrack - Seguimiento Orden de Trabajo {ot_numero}"
 
-        despachar_correo_seguro(destinatario, asunto, html_content)
-        return jsonify({"status": "success", "message": "Correo enviado con éxito"}), 200
+        # Despacho desacoplado en background: responde de inmediato sin colgar Gunicorn
+        despachar_correo_background(destinatario, asunto, html_content)
+
+        return jsonify({
+            "status": "success", 
+            "message": "Notificación de seguimiento despachada correctamente"
+        }), 200
 
     except Exception as e:
-        print(f"[SMTP Error Tracking] {e}")
+        print(f"[SMTP Error Tracking Endpoint] {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -367,18 +380,16 @@ def responder_inquiry_email():
                 "message": "Destinatario y mensaje son obligatorios"
             }), 400
 
-        if not SMTP_USER or not SMTP_PASS:
-            print(f"\n[AVISO SMTP] Modo simulación activo. Respuesta para: {destinatario}")
-            return jsonify({
-                "status": "success", 
-                "message": "Respuesta enviada (modo simulación)"
-            }), 200
-
         html_content = render_inquiry_reply_template(cliente, consulta_original, mensaje)
 
-        despachar_correo_seguro(destinatario, asunto, html_content)
-        return jsonify({"status": "success", "message": "Correo enviado con éxito"}), 200
+        # Despacho desacoplado en background: responde de inmediato sin colgar Gunicorn
+        despachar_correo_background(destinatario, asunto, html_content)
+
+        return jsonify({
+            "status": "success", 
+            "message": "Respuesta enviada correctamente"
+        }), 200
 
     except Exception as e:
-        print(f"[SMTP Error Inquiry] {e}")
+        print(f"[SMTP Error Inquiry Endpoint] {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
