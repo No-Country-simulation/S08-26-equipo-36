@@ -213,7 +213,7 @@ export default function Quotes() {
     }
   };
 
-  const setEstado = async (c, nuevoEstado) => {
+const setEstado = async (c, nuevoEstado) => {
     try {
       const res = await api.actualizarEstadoCotizacion(c.id, nuevoEstado);
       if (res?.status === "success") {
@@ -271,8 +271,7 @@ export default function Quotes() {
               if (matchedOt) {
                 otNumero =
                   matchedOt.numero ||
-                  `OT-${String(matchedOt.identificador || matchedOt.id).padStart(4, "0")}`;
-                // Si la OT tiene cliente_email y aún no teníamos email, lo usamos
+                  `OT-${String(matchedOt.identificador || matchedOt.id_ot || matchedOt.id).padStart(4, "0")}`;
                 if (
                   !resolvedEmail &&
                   (matchedOt.email || matchedOt.cliente_email)
@@ -285,13 +284,35 @@ export default function Quotes() {
             console.warn("[Quotes] Error al sincronizar datos:", fetchErr);
           }
 
+          // 3. Envío real del correo electrónico con el número de OT y link de seguimiento
+          if (resolvedEmail && otNumero) {
+            const API_BASE =
+              import.meta.env.VITE_API_BASE_URL ||
+              import.meta.env.VITE_API_BASE ||
+              "https://qualitytrack-backend-rks5.onrender.com/api";
+
+            fetch(`${API_BASE}/ordenes/enviar-tracking`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: resolvedEmail,
+                numero: otNumero,
+                cliente: c.cliente_nombre || c.cliente || "Cliente",
+                pieza: c.pieza || c.descripcion || "Pieza mecanizada",
+              }),
+            })
+              .then((r) => r.json())
+              .then((d) => console.log("[Quotes] Notificación de tracking enviada:", d))
+              .catch((e) => console.warn("[Quotes] Error enviando correo de tracking:", e));
+          }
+
           navigate("/ordenes", {
             state: {
               newOrderCreated: true,
               orderData: {
-                numero: otNumero || "OT-0005",
+                numero: otNumero || "OT-0004",
                 cliente_nombre: c.cliente_nombre || c.cliente || "Cliente",
-                email: resolvedEmail, // Ahora sí toma el email de clientes
+                email: resolvedEmail,
                 pieza: c.pieza || c.descripcion || "Pieza mecanizada",
               },
             },
